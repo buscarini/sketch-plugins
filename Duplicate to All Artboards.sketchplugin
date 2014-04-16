@@ -33,6 +33,9 @@ else {
 		
 				layerCopy = [layer duplicate];
 		
+				var locked = [layerCopy isLocked];
+				if (locked) [layerCopy setIsLocked:false];
+		
 				[currentArtboard removeLayer:layerCopy];
 				[artboard addLayer:layerCopy];
 
@@ -48,11 +51,64 @@ else {
 				y = ([frame y]*finalProportion)
 				width = ([frame width]*finalProportion)
 				height = ([frame height]*finalProportion)
+				
+				borders = [[layerCopy style] borders];
+				for (var w=0;w<borders.length();w++) {
+					border = borders[w];
+					var thickness = [border thickness];
+					thickness = thickness*finalProportion;
+					[border setThickness:thickness];
+				}
+				
+				shadows = [[layerCopy style] shadows];
+				for (var w=0;w<shadows.length();w++) {
+					shadow = shadows[w];
+					
+					var offsetX = [shadow offsetX];
+					offsetX = offsetX*finalProportion;
+					[shadow setOffsetX:offsetX];
+					
+					var offsetY = [shadow offsetY];
+					offsetY = offsetY*finalProportion;
+					[shadow setOffsetY:offsetY];
+					
+					var blurRadius = [shadow blurRadius];
+					blurRadius = blurRadius*finalProportion;
+					[shadow setBlurRadius:blurRadius];
+					
+					var spread = [shadow spread];
+					spread = spread*finalProportion;
+					[shadow setSpread:spread];
+				}
+				
+				innerShadows = [[layerCopy style] innerShadows];
+				for (var w=0;w<innerShadows.length();w++) {
+					innerShadow = innerShadows[w];
+					
+					var offsetX = [innerShadow offsetX];
+					offsetX = offsetX*finalProportion;
+					[innerShadow setOffsetX:offsetX];
+					
+					var offsetY = [innerShadow offsetY];
+					offsetY = offsetY*finalProportion;
+					[innerShadow setOffsetY:offsetY];
+					
+					var blurRadius = [innerShadow blurRadius];
+					blurRadius = blurRadius*finalProportion;
+					[innerShadow setBlurRadius:blurRadius];
+					
+					var spread = [innerShadow spread];
+					spread = spread*finalProportion;
+					[innerShadow setSpread:spread];
+				}
+				
 
 				[frame setX:Math.round(x)];
 				[frame setY:Math.round(y)];
 				[frame setWidth:Math.round(width)];
 				[frame setHeight:Math.round(height)];
+				
+				[layerCopy setIsLocked:locked];
 			}
 		}
 		
