@@ -12,7 +12,7 @@ The selected layers have to be inside an artboard.
 
 Installation
 --------
-1. [Download the ZIP file with the plugin](https://github.com/buscarini/sketch-plugins/)
+1. [Download the ZIP file with the plugin](https://github.com/buscarini/sketch-plugins/archive/master.zip)
 2. Copy the contents of the ZIP to the Plugins Folder (You can get access to that folder by opening the Plugins menu, choosing `Custom Script...` and then clicking in the gear icon and choosing `Open Plugins Folder`)
 
 How-to
