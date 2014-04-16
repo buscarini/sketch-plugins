@@ -1,0 +1,61 @@
+// (ctrl cmd d)
+// Duplicate to All Artboards
+var app = [NSApplication sharedApplication];
+
+if ([selection count]<=0) {
+	[doc showMessage:"Nothing selected"];
+}
+else {
+	
+	currentArtboard = [[doc currentPage] currentArtboard];
+	if (!currentArtboard) {
+		[doc showMessage:"Selection is not inside an artboard"];
+	}
+	else {
+		
+		currentArtboardFrame = [currentArtboard frame];
+
+		artboards = [[doc currentPage] artboards];
+		for (i=0;i<artboards.length();i++) {
+			artboard = artboards[i];
+	
+			if (artboard==currentArtboard) continue;
+		
+			artboardFrame = [artboard frame];
+	
+			// Use the width difference to scale
+			proportion = [artboardFrame width]/[currentArtboardFrame width];
+			
+			for (var j=0; j<[selection count]; j++) {
+				var layer = selection[j];
+		
+				var finalProportion = proportion;
+		
+				layerCopy = [layer duplicate];
+		
+				[currentArtboard removeLayer:layerCopy];
+				[artboard addLayer:layerCopy];
+
+				frame = [layerCopy frame];
+
+				height = ([frame height]*finalProportion)
+				// If using the width the layer will be too big (changes in proportion between artboards), then the height will be used to calculate the proportion
+				if (height>[artboardFrame height] && [frame height]<=[currentArtboardFrame height]) {
+					finalProportion = [artboardFrame height]/[currentArtboardFrame height];
+				}
+
+				x = ([frame x]*finalProportion)
+				y = ([frame y]*finalProportion)
+				width = ([frame width]*finalProportion)
+				height = ([frame height]*finalProportion)
+
+				[frame setX:Math.round(x)];
+				[frame setY:Math.round(y)];
+				[frame setWidth:Math.round(width)];
+				[frame setHeight:Math.round(height)];
+			}
+		}
+		
+		[doc showMessage:"Finished"];
+	}
+}
