@@ -1,0 +1,17 @@
+// Make Smaller copy with GR
+
+#import '../buscarini/library.js'
+
+if ([selection count]<=0) {
+	[doc showMessage:"Nothing selected"];
+}
+else {
+	for (var i=0; i<[selection count]; i++) {
+		var layer = selection[i];
+		
+		layerCopy = [layer duplicate];
+		
+		com.buscarini.scaleLayerWithPct(layerCopy,1/com.buscarini.goldenRatio)
+	}
+	
+}
