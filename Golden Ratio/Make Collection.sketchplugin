@@ -1,0 +1,79 @@
+// Make Bigger copy with GR
+
+#import '../buscarini/library.js'
+
+var margin = 10
+
+if ([selection count]<=0) {
+	[doc showMessage:"Nothing selected"];
+}
+else {
+	
+	var numElementsString = [doc askForUserInput:"How many final elements?" initialValue:"5"]
+	
+	log(numElementsString)
+	
+	var numElements = parseInt(numElementsString,10)
+
+	log(numElements)
+	
+	var biggerElements = Math.floor(numElements/2)
+
+	log(biggerElements)
+	
+	if (isNaN(biggerElements) || biggerElements<2 || biggerElements>200 || !biggerElements || biggerElements==undefined) {
+		var app = [NSApplication sharedApplication];
+		[app displayDialog:"You should provide a number greater than 1 and less than 200" withTitle:"Wrong amount"]
+	}
+	else {
+		for (var i=0; i<[selection count]; i++) {
+			var layer = selection[i];
+		
+			var frame = [layer frame]
+			var originalWidth = [frame width]
+			var x = [frame x]
+		
+			// Bigger elements
+			var currentPct = 1
+			var currentX = x
+			var previousWidth = originalWidth
+			for (var j=0;j<biggerElements;j++) {
+				currentPct *= com.buscarini.goldenRatio
+				layerCopy = [layer duplicate];
+		
+				com.buscarini.scaleLayerWithPct(layerCopy,currentPct)
+			
+				var frameCopy = [layerCopy frame]
+				currentX += previousWidth
+				currentX += margin
+				[frameCopy setX:currentX]
+			
+				previousWidth = [frameCopy width]
+			}
+		
+			// Smaller elements
+			currentPct = 1
+			currentX = x
+			for (var j=0;j<biggerElements;j++) {
+				currentPct /= com.buscarini.goldenRatio
+				layerCopy = [layer duplicate];
+				
+				var finalWidth = [frameCopy width]*currentPct
+				if (finalWidth<=1) {
+					[[layerCopy parentGroup] removeLayer:layerCopy]
+					break;
+				}
+		
+				com.buscarini.scaleLayerWithPct(layerCopy,currentPct)
+
+				var frameCopy = [layerCopy frame]
+				var widthCopy = [frameCopy width]
+				
+				currentX -= widthCopy
+				currentX -= margin
+				[frameCopy setX:currentX]
+			}
+		}		
+	}
+	
+}
