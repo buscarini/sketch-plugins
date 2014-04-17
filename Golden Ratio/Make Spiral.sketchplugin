@@ -1,0 +1,99 @@
+// Make Spiral with rectangles
+
+#import '../buscarini/library.js'
+
+var setDefaultColor = function(layer) {
+	var color = [[[[layer style] borders] addNewStylePart] color]
+	[color setRed:0.5]
+	[color setGreen:0.5]
+	[color setBlue:0.5]
+}
+
+var setSize = function(layer,size) {
+	var frame = [layer frame]
+	[frame setWidth:size]
+	[frame setHeight:size]
+}
+
+var maxAllowedSize = 10000
+var initialValue = 3
+
+var maxSize = [doc askForUserInput:"Maximum dimension?" initialValue:"500"]
+
+log(maxSize)
+
+maxSize = parseInt(maxSize,10)
+
+log(maxSize)
+
+if (isNaN(maxSize) || maxSize<2 || !maxSize || maxSize>maxAllowedSize || maxSize==undefined) {
+	var app = [NSApplication sharedApplication];
+	[app displayDialog:("You should provide a number greater than 1 and lesser than " + maxAllowedSize) withTitle:"Wrong maximum dimension"]
+}
+else {
+	var previousSize = initialValue
+	var currentSize = initialValue
+	// First rectangles
+	var rectangle = [[doc currentPage] addLayerOfType:"rectangle"]
+
+	setSize(rectangle,previousSize)
+	setDefaultColor(rectangle)
+	
+	rectangle = [[doc currentPage] addLayerOfType:"rectangle"]
+
+	setSize(rectangle,currentSize)
+	setDefaultColor(rectangle)
+	
+	var frame = [rectangle frame]
+	[frame setX:[frame x]+[frame width]]
+
+	var direction = 0 /// 0 bottom, 1 right, 2 top, 3 left
+	
+	currentSize += previousSize
+	
+	var previousRectangle = rectangle
+	
+	
+	var firstTime = true
+	while (currentSize<maxSize) {
+		rectangle = [[doc currentPage] addLayerOfType:"rectangle"]
+
+		setSize(rectangle,currentSize)
+		setDefaultColor(rectangle)
+		
+		var frame = [rectangle frame]
+		var previousX = [[previousRectangle frame] x]
+		var previousY = [[previousRectangle frame] y]
+		var previousWidth = [[previousRectangle frame] width]
+		var previousHeight = [[previousRectangle frame] height]
+		
+		if (direction==0) {
+			if (firstTime) [frame setX:(previousX+previousWidth-[frame width])]
+			else [frame setX:previousX]
+			
+			[frame setY:previousY+previousHeight]
+		}
+		else if (direction==1) {
+			[frame setX:previousX+previousWidth]
+			[frame setY:previousY+previousHeight-[frame height]]
+		}
+		else if (direction==2) {
+			[frame setX:previousX+previousWidth-[frame width]]
+			[frame setY:previousY-[frame height]]
+		}
+		else {
+			[frame setX:previousX-[frame width]]
+			[frame setY:previousY]
+		}
+		
+		firstTime = false
+		
+		direction++
+		if (direction>3) direction=0
+		
+		previousRectangle = rectangle
+		var nextPreviousSize = currentSize
+		currentSize += previousSize
+		previousSize = nextPreviousSize
+	}
+}
