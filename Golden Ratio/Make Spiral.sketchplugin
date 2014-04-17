@@ -20,26 +20,26 @@ var initialValue = 3
 
 var maxSize = [doc askForUserInput:"Maximum dimension?" initialValue:"500"]
 
-log(maxSize)
-
 maxSize = parseInt(maxSize,10)
-
-log(maxSize)
 
 if (isNaN(maxSize) || maxSize<2 || !maxSize || maxSize>maxAllowedSize || maxSize==undefined) {
 	var app = [NSApplication sharedApplication];
 	[app displayDialog:("You should provide a number greater than 1 and lesser than " + maxAllowedSize) withTitle:"Wrong maximum dimension"]
 }
 else {
+	
+	var group = [[doc currentPage] addLayerOfType:"group"]
+	// var group = [doc currentPage]
+	
 	var previousSize = initialValue
 	var currentSize = initialValue
 	// First rectangles
-	var rectangle = [[doc currentPage] addLayerOfType:"rectangle"]
+	var rectangle = [group addLayerOfType:"rectangle"]
 
 	setSize(rectangle,previousSize)
 	setDefaultColor(rectangle)
 	
-	rectangle = [[doc currentPage] addLayerOfType:"rectangle"]
+	rectangle = [group addLayerOfType:"rectangle"]
 
 	setSize(rectangle,currentSize)
 	setDefaultColor(rectangle)
@@ -53,13 +53,14 @@ else {
 	
 	var previousRectangle = rectangle
 	
-	
 	var firstTime = true
 	while (currentSize<maxSize) {
-		rectangle = [[doc currentPage] addLayerOfType:"rectangle"]
+
+		rectangle = [group addLayerOfType:"rectangle"]
 
 		setSize(rectangle,currentSize)
-		setDefaultColor(rectangle)
+		setDefaultColor(rectangle)		
+		// [rectangle setRadius:Math.round(currentSize/2)]
 		
 		var frame = [rectangle frame]
 		var previousX = [[previousRectangle frame] x]
@@ -96,4 +97,6 @@ else {
 		currentSize += previousSize
 		previousSize = nextPreviousSize
 	}
+	
+	[group resizeRoot]
 }
