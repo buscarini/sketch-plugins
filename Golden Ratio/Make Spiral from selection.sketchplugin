@@ -18,7 +18,8 @@ var setSize = function(layer,size) {
 var maxAllowedSize = 10000
 var initialValue = 3
 
-var b = 0.2
+var b = 0.15
+var inc = 0.25
 
 // var maxSize = [doc askForUserInput:"Maximum dimension?" initialValue:"50"]
 var maxSize = 20
@@ -73,7 +74,7 @@ else {
 				}
 			}
 		
-			t++
+			t += inc
 		}
 	}
 }
