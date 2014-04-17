@@ -1,0 +1,26 @@
+// Make Rectangle
+
+#import '../buscarini/library.js'
+
+var rectWidth = [doc askForUserInput:"Rectangle width?" initialValue:"300"]
+
+rectWidth = parseInt(rectWidth,10)
+
+if (isNaN(rectWidth) || rectWidth<2 || !rectWidth || rectWidth==undefined) {
+	var app = [NSApplication sharedApplication];
+	[app displayDialog:"You should provide a number greater than 1" withTitle:"Wrong width"]
+}
+else {
+	
+	var rectangle = [[doc currentPage] addLayerOfType:"rectangle"]
+
+	var frame = [rectangle frame]
+	[frame setWidth:rectWidth]
+	var height = rectWidth*com.buscarini.goldenRatio
+	[frame setHeight:height]
+	
+	var color = [[[[rectangle style] fills] addNewStylePart] color]
+	[color setRed:0.5]
+	[color setGreen:0.5]
+	[color setBlue:0.5]
+}

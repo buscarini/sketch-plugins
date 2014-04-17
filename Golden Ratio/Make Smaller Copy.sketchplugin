@@ -2,6 +2,8 @@
 
 #import '../buscarini/library.js'
 
+var margin = 10
+
 if ([selection count]<=0) {
 	[doc showMessage:"Nothing selected"];
 }
@@ -11,7 +13,13 @@ else {
 		
 		layerCopy = [layer duplicate];
 		
+		var width = [[layerCopy frame] width]
+		
 		com.buscarini.scaleLayerWithPct(layerCopy,1/com.buscarini.goldenRatio)
+		
+		var frame = [layerCopy frame]
+		var x = [frame x]
+		[frame setX:x-width-margin]
 	}
 	
 }

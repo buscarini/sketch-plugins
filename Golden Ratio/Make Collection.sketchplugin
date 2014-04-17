@@ -11,15 +11,9 @@ else {
 	
 	var numElementsString = [doc askForUserInput:"How many final elements?" initialValue:"5"]
 	
-	log(numElementsString)
-	
 	var numElements = parseInt(numElementsString,10)
-
-	log(numElements)
 	
 	var biggerElements = Math.floor(numElements/2)
-
-	log(biggerElements)
 	
 	if (isNaN(biggerElements) || biggerElements<2 || biggerElements>200 || !biggerElements || biggerElements==undefined) {
 		var app = [NSApplication sharedApplication];
