@@ -14,6 +14,11 @@ This plugin takes the selected layers and makes a copy for each artboard in the 
 
 The selected layers have to be inside an artboard.
 
+## Golden Ratio
+
+Make a bigger or smaller copy of the selection using the golden ratio.
+
+
 Installation
 --------
 1. [Download the ZIP file with the plugin](https://github.com/buscarini/sketch-plugins/archive/master.zip)
