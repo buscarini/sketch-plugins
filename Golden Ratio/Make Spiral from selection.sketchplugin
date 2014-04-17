@@ -1,0 +1,79 @@
+// Make Spiral from selection
+
+#import '../buscarini/library.js'
+
+var setDefaultColor = function(layer) {
+	var color = [[[[layer style] borders] addNewStylePart] color]
+	[color setRed:0.5]
+	[color setGreen:0.5]
+	[color setBlue:0.5]
+}
+
+var setSize = function(layer,size) {
+	var frame = [layer frame]
+	[frame setWidth:size]
+	[frame setHeight:size]
+}
+
+var maxAllowedSize = 10000
+var initialValue = 3
+
+var b = 0.2
+
+// var maxSize = [doc askForUserInput:"Maximum dimension?" initialValue:"50"]
+var maxSize = 20
+
+maxSize = parseInt(maxSize,10)
+
+if (isNaN(maxSize) || maxSize<2 || !maxSize || maxSize>maxAllowedSize || maxSize==undefined) {
+	var app = [NSApplication sharedApplication];
+	[app displayDialog:("You should provide a number greater than 1 and lesser than " + maxAllowedSize) withTitle:"Wrong maximum dimension"]
+}
+else {
+	
+	if ([selection count]<=0) {
+		[doc showMessage:"Nothing selected"];
+	}
+	else {
+		
+		var t = 1.0
+		while (t<maxSize) {
+			for (var i=0; i<[selection count]; i++) {
+				var layer = selection[i];
+		
+				layerCopy = [layer duplicate];
+				var frame = [layerCopy frame]
+				
+				var a = [frame width]
+			
+				log("bt: " + b*t)
+				log("e: " + com.buscarini.e)
+							
+				aux = a*Math.pow(com.buscarini.e,b*t)
+			
+				log("aux: " + aux)
+			
+				x = aux*Math.cos(t)
+				y = aux*Math.sin(t)
+				
+				if (isNaN(x) || isNaN(y)) {
+					[doc showMessage:"Error in script calculating next position"];
+					
+					// var app = [NSApplication sharedApplication];
+// 					[app displayDialog:("Error in script calculating next position") withTitle:"Error"]
+					break;
+				}
+				else {
+					log("x: " + x)
+					log("y: " + y)
+			
+					
+					[frame setX:x]
+					[frame setY:y]
+				}
+			}
+		
+			t++
+		}
+	}
+}
