@@ -1,0 +1,29 @@
+// Mirror Bottom
+
+#import 'buscarini/library.js'
+
+if ([selection count]<=0) {
+	[doc showMessage:"Nothing selected"];
+}
+else {
+	for (var i=0; i<[selection count]; i++) {
+		var layer = selection[i];
+		
+		var mirrorName = [layer name] + "_mirror"
+		
+		var alreadyAdded = com.buscarini.findLayerWithName(mirrorName)
+		
+		if (alreadyAdded) {
+			[[alreadyAdded parentGroup] removeLayer:alreadyAdded]
+		}
+		
+		alreadyAdded = [layer duplicate];
+		
+		[alreadyAdded setName:mirrorName]
+		
+		var frame = [layer frame]
+		[[alreadyAdded frame] setY:([frame y] + [frame height])]
+		[alreadyAdded setIsFlippedVertical:true]
+	}
+	
+}

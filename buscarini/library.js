@@ -3,19 +3,35 @@ var com = {};
 
 com.buscarini = {
 	goldenRatio : 1.61803398875,
+	e : 2.7182818284590452353602874,
 	scaleLayerWithPct: function(layer,percent,round) {
 		frame = [layer frame]
 		width = [frame width]
 		height = [frame height]
-		
-		log("size: " + width + " " + height)
-		
+				
 		width = width*percent
 		height = height*percent
-		
-		log("scaled size: " + width + " " + height)
-		
+				
 		com.buscarini.scaleLayerToSize(layer,width,height,round)
+	},
+	findLayerWithName: function(name) {
+	
+		var page = [doc currentPage]
+		return com.buscarini.findLayerWithNameInGroup(name,page)
+	},
+	findLayerWithNameInGroup: function(name,group) {
+		var allLayers = [group layers]
+		for (var i=0;i<[allLayers count];i++) {
+			var layer = allLayers[i]
+			if ([layer name]==name) return layer;
+			if (layer.layers!=undefined) {
+				/// It's a group
+				var found = com.buscarini.findLayerWithNameInGroup(name,layer)
+				if (found) return found
+			}
+		}
+		
+		return null;
 	},
 	scaleLayerToSize: function(layer,width,height,round) {
 		
