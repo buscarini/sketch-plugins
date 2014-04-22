@@ -16,7 +16,7 @@ The selected layers have to be inside an artboard.
 
 ## Golden Ratio
 
-Make a bigger or smaller copy of the selection using the golden ratio.
+Make a bigger or smaller copy of the selection using the golden ratio. Here's an example of using it to recreate the iCloud icon (I know it's not correct, it's just a quick example):
 
 ![Golden Ratio collection example video](https://github.com/buscarini/sketch-plugins/raw/master/images/gr_collection.gif)
 
