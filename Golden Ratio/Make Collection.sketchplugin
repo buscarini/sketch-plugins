@@ -9,7 +9,7 @@ if ([selection count]<=0) {
 }
 else {
 	
-	var numElementsString = [doc askForUserInput:"How many final elements?" initialValue:"5"]
+	var numElementsString = [doc askForUserInput:"How many final elements? (2–200)" initialValue:"5"]
 	
 	var numElements = parseInt(numElementsString,10)
 	

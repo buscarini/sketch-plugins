@@ -1,0 +1,94 @@
+// Make Right Bottom Shade
+
+#import 'buscarini/library.js'
+
+var inc = 1
+var shadeSize = 10
+var initialColorInc = 0.0
+var finalColorInc = 0.05
+
+var leftColor=[0.55,0.55,0.55];
+var bottomColor=[0.45,0.45,0.45];
+
+if ([selection count]<=0) {
+	[doc showMessage:"Nothing selected"];
+}
+else {
+	
+	var shadeSizeString = [doc askForUserInput:"Shade size? (1–20)" initialValue:"5"]
+	
+	var shadeSize = parseInt(shadeSizeString,10)
+	
+	if (isNaN(shadeSize) || shadeSize<1 || shadeSize>20 || !shadeSize || shadeSize==undefined) {
+		var app = [NSApplication sharedApplication];
+		[app displayDialog:"You should provide a number greater than 0 and less than 20" withTitle:"Wrong shade size"]
+	}
+	else {
+		for (var i=0; i<[selection count]; i++) {
+			var layer = selection[i];
+		
+			group = [layer parentGroup]
+			var newGroup = [group addLayerOfType:"group"]
+			[group removeLayer:layer]
+			[newGroup addLayer:layer]
+		
+			var currentColorInc = initialColorInc
+			var colorIncOffset = (finalColorInc-initialColorInc)/shadeSize
+		
+			for (s=shadeSize-1;s>=0;s-=inc) {
+			
+				/// Bottom		
+			
+				layerCopy = [layer duplicate];
+				[layerCopy setName:[layerCopy name] + "_bottom"]
+				frame = [layerCopy frame]
+
+				var originalX = [frame x]
+				var originalY = [frame y]
+			
+				offsetX = originalX+s+inc
+				offsetY = originalY+s
+			
+				[frame setX:offsetX]
+				[frame setY:offsetY]
+			
+				com.buscarini.removeAllFills(layerCopy)
+
+				layerStyle = [layerCopy style]
+				color = [[[layerStyle fills] addNewStylePart] color]
+				[color setRed:bottomColor[0]]
+				[color setGreen:bottomColor[1]]
+				[color setBlue:bottomColor[2]]			
+			
+				/// Right
+			
+				layerCopy = [layer duplicate];
+				[layerCopy setName:[layerCopy name] + "_right"]
+				frame = [layerCopy frame]
+			
+				var originalX = [frame x]
+				var originalY = [frame y]
+			
+				offsetX = originalX+s
+				offsetY = originalY+s+inc
+
+				[frame setX:offsetX]
+				[frame setY:offsetY]
+			
+				com.buscarini.removeAllFills(layerCopy)
+
+				layerStyle = [layerCopy style]
+				color = [[[layerStyle fills] addNewStylePart] color]
+				[color setRed:leftColor[0]]
+				[color setGreen:leftColor[1]]
+				[color setBlue:leftColor[2]]	
+			}
+		
+			group = [layer parentGroup]
+			[group removeLayer:layer]
+			[group addLayer:layer]
+			
+			[group resizeRoot]
+		}
+	}
+}
