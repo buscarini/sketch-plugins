@@ -18,7 +18,7 @@ The selected layers have to be inside an artboard.
 
 Make a bigger or smaller copy of the selection using the golden ratio.
 
-![Golden Ratio collection example video](https://github.com/buscarini/sketch-plugins/raw/master/images/gr_collection_.gif)
+![Golden Ratio collection example video](https://github.com/buscarini/sketch-plugins/raw/master/images/gr_collection.gif)
 
 ## Installation
 
