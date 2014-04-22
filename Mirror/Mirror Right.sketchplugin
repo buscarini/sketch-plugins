@@ -1,4 +1,4 @@
-// (ctrl cmd →)
+// (ctrl shift →)
 // Mirror Right
 
 #import 'buscarini/library.js'
@@ -7,8 +7,11 @@ if ([selection count]<=0) {
 	[doc showMessage:"Nothing selected"];
 }
 else {
-	for (var i=0; i<[selection count]; i++) {
-		var layer = selection[i];
+	var selectedLayers = selection
+	// [[doc currentPage] deselectAllLayers]
+	
+	for (var i=0; i<[selectedLayers count]; i++) {
+		var layer = selectedLayers[i];
 		
 		var mirrorName = [layer name] + "_mirror"
 		
@@ -25,6 +28,7 @@ else {
 		var frame = [layer frame]
 		[[alreadyAdded frame] setX:([frame x] + [frame width])]
 		[alreadyAdded setIsFlippedHorizontal:true]
+		
+		// [layer select:true byExpandingSelection:true]
 	}
-	
 }

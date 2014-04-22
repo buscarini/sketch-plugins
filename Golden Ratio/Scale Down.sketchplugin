@@ -1,0 +1,25 @@
+// Scale Down
+
+#import '../buscarini/library.js'
+
+var margin = 10
+
+if ([selection count]<=0) {
+	[doc showMessage:"Nothing selected"];
+}
+else {
+	for (var i=0; i<[selection count]; i++) {
+		var layer = selection[i];
+		
+		layerCopy = layer;
+		
+		var previousWidth = [[layerCopy frame] width]
+		
+		com.buscarini.scaleLayerWithPct(layerCopy,1/com.buscarini.goldenRatio)
+		
+		var frame = [layerCopy frame]
+		var x = [frame x]
+		[frame setX:x+previousWidth+margin]
+	}
+	
+}
