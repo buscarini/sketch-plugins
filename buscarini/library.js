@@ -47,7 +47,7 @@ com.buscarini = {
 	findLayerWithNameInGroup: function(name,group) {
 		var allLayers = [group layers]
 		for (var i=0;i<[allLayers count];i++) {
-			var layer = allLayers[i]
+			var layer = [allLayers objectAtIndex:i]
 			if ([layer name]==name) return layer;
 			if (layer.layers!=undefined) {
 				/// It's a group
@@ -77,16 +77,16 @@ com.buscarini = {
 		proportion = width/oldWidth
 		
 		borders = [[layer style] borders];
-		for (var w=0;w<borders.length();w++) {
-			border = borders[w];
+		for (var w=0; w < [borders count]; w++) {
+			border = [borders objectAtIndex:w];
 			var thickness = [border thickness];
 			thickness = thickness*proportion;
 			[border setThickness:thickness];
 		}
 		
 		shadows = [[layer style] shadows];
-		for (var w=0;w<shadows.length();w++) {
-			shadow = shadows[w];
+		for (var w=0; w < [shadows count];w++) {
+			shadow = [shadows objectAtIndex:w];
 			
 			var offsetX = [shadow offsetX];
 			offsetX = offsetX*proportion;
@@ -106,8 +106,8 @@ com.buscarini = {
 		}
 		
 		innerShadows = [[layer style] innerShadows];
-		for (var w=0;w<innerShadows.length();w++) {
-			innerShadow = innerShadows[w];
+		for (var w=0; w < [innerShadows count]; w++) {
+			innerShadow = [innerShadows objectAtIndex:w];
 			
 			var offsetX = [innerShadow offsetX];
 			offsetX = offsetX*proportion;
