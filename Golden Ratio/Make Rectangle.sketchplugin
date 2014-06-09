@@ -19,8 +19,5 @@ else {
 	var height = rectWidth*com.buscarini.goldenRatio
 	[frame setHeight:height]
 	
-	var color = [[[[rectangle style] fills] addNewStylePart] color]
-	[color setRed:0.5]
-	[color setGreen:0.5]
-	[color setBlue:0.5]
+	com.buscarini.addLayerDefaultFillColor(rectangle);
 }

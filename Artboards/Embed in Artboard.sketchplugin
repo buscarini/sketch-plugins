@@ -1,0 +1,48 @@
+// Embed in Artboard
+
+#import 'buscarini/library.js'
+
+var app = [NSApplication sharedApplication];
+
+if ([selection count]<=0) {
+	[doc showMessage:"Nothing selected"];
+}
+else {
+	
+	currentArtboard = [[doc currentPage] currentArtboard];
+	if (currentArtboard!=null) {
+		[doc showMessage:"Selection is already inside an artboard"];
+	}
+	else {
+		
+		minX = 10000
+		minY = 10000
+		maxX = -10000
+		maxY = -10000
+		for (var j=0; j<[selection count]; j++) {
+			var layer = selection[j];
+			frame = [layer frame]
+			if (frame.x<minX) minX = frame.x
+			if (frame.y<minY) minY = frame.y
+			if (frame.x>maxX) maxX = frame.x
+			if (frame.y>maxY) maxY = frame.y
+		}
+		
+		artboard = [[doc currentPage] addLayerOfType:"artboard"]
+		currentArtboardFrame = [artboard frame];
+		[currentArtboardFrame setX:minX]
+		[currentArtboardFrame setY:minY]
+		[currentArtboardFrame setWidth:maxX-minX]
+		[currentArtboardFrame setHeight:maxY-minY]
+
+		for (var j=0; j<[selection count]; j++) {
+			var layer = selection[j];
+			[artboard addLayer:layer]
+			layerFrame = [layer frame]
+			[layerFrame setX:(layerFrame.x-minX)]
+			[layerFrame setY:(layerFrame.y-minY)]
+		}
+
+		[doc showMessage:"Finished"];
+	}
+}

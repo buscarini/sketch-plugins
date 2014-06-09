@@ -1,0 +1,15 @@
+// Make Rectangle with same size as selection
+
+#import '../buscarini/library.js'
+
+if ([selection count]<=0) {
+	[doc showMessage:"Nothing selected"];
+}
+else {
+	
+	var rect = com.buscarini.calculateBounds(selection);
+	var rectangle = [[doc currentPage] addLayerOfType:"rectangle"]
+	[rectangle setFrame:rect];
+	
+	com.buscarini.addLayerDefaultFillColor(rectangle);
+}

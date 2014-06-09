@@ -58,6 +58,43 @@ com.buscarini = {
 		
 		return null;
 	},
+	calculateBounds: function(layers) {
+		var minX = Number.MAX_VALUE;
+		var minY = Number.MAX_VALUE;
+		var maxX = Number.MIN_VALUE;
+		var maxY = Number.MIN_VALUE;
+		
+		for (var i=0;i<[layers count];i++) {
+			var layer = layers[i]
+			
+			var frame = [layer frame]
+			
+			if ([frame x]<minX) minX = [frame x]
+			if ([frame y]<minY) minY = [frame y]
+			
+			var frameMaxX = [frame x]+[frame width]
+			var frameMaxY = [frame y]+[frame height]
+			if (frameMaxX>maxX) maxX = frameMaxX
+			if (frameMaxY>maxY) maxY = frameMaxY
+		}
+		
+		var rect = [[MSRect alloc] init];
+		[rect setX:minX];
+		[rect setY:minY];
+		[rect setWidth:maxX-minX];
+		[rect setHeight:maxY-minY];
+		
+		return rect;
+	},
+	addLayerDefaultFillColor: function(layer) {
+		return this.addLayerFillColor(layer,0.5,0.5,0.5);
+	},
+	addLayerFillColor: function(layer,red,green,blue) {
+		var color = [[[[layer style] fills] addNewStylePart] color]
+		[color setRed:red];
+		[color setGreen:green];
+		[color setBlue:blue];
+	},
 	scaleLayerToSize: function(layer,width,height,round) {
 		
 		if (round==undefined) round = true;
@@ -76,13 +113,15 @@ com.buscarini = {
 		oldHeight = [frame height]
 		proportion = width/oldWidth
 		
-		borders = [[layer style] borders];
-		for (var w=0;w<borders.length();w++) {
-			border = borders[w];
-			var thickness = [border thickness];
-			thickness = thickness*proportion;
-			[border setThickness:thickness];
-		}
+		// borders = [[layer style] borders];
+// 		for (var w=0;w<borders.length();w++) {
+// 			border = borders[w];
+// 			var thickness = [border thickness];
+// 			if (thickness!=undefined) {
+// 				thickness = thickness*proportion;
+// 				[border setThickness:thickness];				
+// 			}
+// 		}
 		
 		shadows = [[layer style] shadows];
 		for (var w=0;w<shadows.length();w++) {

@@ -19,7 +19,7 @@ else {
 		currentArtboardFrame = [currentArtboard frame];
 
 		artboards = [[doc currentPage] artboards];
-		for (i=0;i<artboards.length();i++) {
+		for (i=0;i<artboards.count();i++) {
 			artboard = artboards[i];
 	
 			if (artboard==currentArtboard) continue;

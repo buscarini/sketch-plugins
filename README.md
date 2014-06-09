@@ -23,7 +23,7 @@ Make a bigger or smaller copy of the selection using the golden ratio. Here's an
 ## Installation
 
 1. [Download the ZIP file with the plugin](https://github.com/buscarini/sketch-plugins/archive/master.zip)
-2. Copy the contents of the ZIP to the Plugins Folder (You can get access to that folder by opening the Plugins menu, choosing `Custom Script...` and then clicking in the gear icon and choosing `Open Plugins Folder`)
+2. Copy the contents of the ZIP to the Plugins Folder (You can get access to that folder by opening the Plugins menu, choosing `Custom Script...` and then clicking in the gear icon and choosing `Open Plugins Folder`). You don't need to copy the `images` folder, the `README.md` nor the `LICENSE` files.
 
 How-to
 ------
