@@ -24,6 +24,14 @@ com.buscarini = {
 		name = name.replace(/\s+/g, '')
 		return name
 	},
+	nameForVariable: function(name) {
+		name = this.normalizeName(name)
+		return name.charAt(0).toLowerCase() + name.slice(1);
+	},
+	nameForClass: function(name) {
+		name = this.normalizeName(name)
+		return name.charAt(0).toUpperCase() + name.slice(1);
+	},
 	removeAllFills: function(layer) {
 		layerStyle = [layer style]
 		fills = [layerStyle fills]

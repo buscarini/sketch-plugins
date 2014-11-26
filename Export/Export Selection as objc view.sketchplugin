@@ -44,11 +44,16 @@ function isGroup(layer) {
   return [layer isMemberOfClass:[MSLayerGroup class]] || [layer isMemberOfClass:[MSArtboardGroup class]]
 }
 
-function processBezierLayer(layerName,layer,parentLayer) {
+function processBezierLayer(layer,rootFrame) {
+	log("processing bezier layer " + layer)
+	
 	var result = []
 	if(layer && layer.isKindOfClass(MSShapePathLayer)) {
 
+		var parentLayer = [layer parentGroup]
 		var absoluteRect = [parentLayer frame]
+			
+		var layerName = com.buscarini.nameForVariable(parentLayer.name())
 
 		var path = layer.path()
 		// var path = layer.bezierPathWithTransforms()
@@ -102,7 +107,7 @@ function processBezierLayer(layerName,layer,parentLayer) {
 			"",
 			"\t"+layerName+".path = "+layerName+"Path.CGPath;",
 			"",
-			"\t[self.layer addSublayer:"+layerName+"];"
+			"\t[self.layer insertSublayer:"+layerName+" atIndex:0];"
 		])
 		
 		var layerStyle = [parentLayer style]
@@ -124,23 +129,26 @@ function processBezierLayer(layerName,layer,parentLayer) {
 	return result
 }
 
-function processLayer(layer) {
+function processLayer(layer,rootFrame) {
+	log("processing layer " + layer)
+	
 	var result = []
-	if(layer && layer.isKindOfClass(MSShapeGroup)) {
 
-		log("1")
-		
-		var layerName = com.buscarini.normalizeName(layer.name())
-		log("layer name " + layerName)
-
-		sublayer = [[layer layers] objectAtIndex:0]
-		if (sublayer && sublayer.isVisible()) {
-			dump(sublayer)
-			if (sublayer.isKindOfClass(MSShapePathLayer)) {
-				result = result.concat(processBezierLayer(layerName,sublayer,layer))
-			}
+	if (!layer || !layer.isVisible()) return result
 			
-		} 
+	if (isGroup(layer)) {
+	    var sublayers = [layer layers];
+	    for (var sub=([sublayers count] - 1); sub >= 0; sub--) {
+	        var sublayer = [sublayers objectAtIndex:sub]
+			result = result.concat(processLayer(sublayer,rootFrame))
+		}
+	}
+	else if (layer.isKindOfClass(MSShapeGroup))  {
+		sublayer = [[layer layers] objectAtIndex:0]
+		result = result.concat(processLayer(sublayer,rootFrame))
+	}
+	else if (layer.isKindOfClass(MSShapePathLayer)) {
+		result = result.concat(processBezierLayer(layer,rootFrame))
 	}
 
 	return result
@@ -222,16 +230,18 @@ else {
 
 			log("processing layer: " + layer)
 			
-			if (isGroup(layer)) {
-			    var sublayers = [layer layers];
-			    for (var sub=([sublayers count] - 1); sub >= 0; sub--) {
-			        var sublayer = [sublayers objectAtIndex:sub]
-					implementation = implementation.concat(processLayer(sublayer))
-				}
-			}
-			else {
-				implementation = implementation.concat(processLayer(layer))
-			}		
+			implementation = implementation.concat(processLayer(layer,layer.frame()))
+			
+			// if (isGroup(layer)) {
+			//     var sublayers = [layer layers];
+			//     for (var sub=([sublayers count] - 1); sub >= 0; sub--) {
+			//         var sublayer = [sublayers objectAtIndex:sub]
+			// 		implementation = implementation.concat(processLayer(sublayer))
+			// 	}
+			// }
+			// else {
+			// 	implementation = implementation.concat(processLayer(layer))
+			// }
 		}
 	
 		implementation.push("}")
