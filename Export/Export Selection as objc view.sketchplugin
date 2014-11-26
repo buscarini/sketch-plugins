@@ -37,25 +37,13 @@ function isGroup(layer) {
   return [layer isMemberOfClass:[MSLayerGroup class]] || [layer isMemberOfClass:[MSArtboardGroup class]]
 }
 
-function processLayer(layer) {
+function processBezierLayer(layerName,layer) {
 	var result = []
-	if(layer && layer.isKindOfClass(MSShapeGroup)) {
-
-		log("1")
-
-		layer = [[layer layers] objectAtIndex:0]
-
-
-		dump(layer)
-
+	if(layer && layer.isKindOfClass(MSShapePathLayer)) {
 
 		var path = layer.path()
 			
 		log("2")
-			
-
-		var layerName = com.buscarini.normalizeName(layer.name())
-		log("layer name " + layerName)
 		
 		result = result.concat([
 			"\tCAShapleLayer *" + layerName + " = [CAShapeLayer layer];",
@@ -73,10 +61,14 @@ function processLayer(layer) {
 		    var point = [points objectAtIndex:j]
 				
 			if (j==0) {
-				result.push("\t["+layerName+"Path moveToPoint:CGPointMake("+point.point().x+","+point.point().y+" )];")
+				result.push("\t["+layerName+"Path moveToPoint:CGPointMake("+point.point().x+","+point.point().y+")];")
+			}
+			
+			if (point.curveFrom() && point.curveTo()) {
+				result.push("\t["+layerName+"Path addCurveToPoint:CGPointMake("+point.point().x+","+point.point().y+") controlPoint1:CGPointMake("+point.curveFrom().x+","+point.curveFrom().y+") controlPoint2:CGPointMake("+point.curveTo().x+","+point.curveTo().y+")];")
 			}
 			else {
-				result.push("\t["+layerName+"Path addLineToPoint:CGPointMake("+point.point().x+","+point.point().y+" )];")
+				result.push("\t["+layerName+"Path addLineToPoint:CGPointMake("+point.point().x+","+point.point().y+")];")
 			}
 		}
 		
@@ -85,9 +77,41 @@ function processLayer(layer) {
 			"",
 			"\t"+layerName+".path = "+layerName+"Path.CGPath;",
 			"",
-			"\t[self.layer addSublayer:self.arrowLayer];"
+			"\t[self.layer addSublayer:"+layerName+"];"
 		])
 		
+	}
+
+	return result
+}
+
+function processRectangleLayer(layerName,layer) {
+	var result = []
+	
+	
+	return result
+}
+
+function processLayer(layer) {
+	var result = []
+	if(layer && layer.isKindOfClass(MSShapeGroup)) {
+
+		log("1")
+		
+		var layerName = com.buscarini.normalizeName(layer.name())
+		log("layer name " + layerName)
+
+		layer = [[layer layers] objectAtIndex:0]
+		if (layer) {
+			dump(layer)
+			if (layer.isKindOfClass(MSRectangleShape)) {
+				result = result.concat(processRectangleLayer(layerName,layer))
+			}
+			else if (layer.isKindOfClass(MSShapePathLayer)) {
+				result = result.concat(processBezierLayer(layerName,layer))
+			}
+			
+		} 
 	}
 
 	return result
@@ -140,6 +164,24 @@ else {
 								"@end",
 								"",
 								"@implementation "+viewName+"",
+								"",
+								"- (id)initWithFrame:(CGRect)frame",
+								"{",
+								"\tself = [super initWithFrame:frame];",
+								"\tif (self) {",
+								"\t\t[self performInit];",
+								"\t}",
+								"\treturn self;",
+								"}",
+								"",
+								"- (id)initWithCoder:(NSCoder *)aDecoder",
+								"{",
+								"\tself = [super initWithCoder:aDecoder];",
+								"\tif (self) {",
+								"\t\t[self performInit];",
+								"\t}",
+								"\treturn self;",
+								"}",
 								"",
 								"- (void) performInit {"
 								]
