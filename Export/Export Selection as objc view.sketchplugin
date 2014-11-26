@@ -85,13 +85,6 @@ function processBezierLayer(layerName,layer) {
 	return result
 }
 
-function processRectangleLayer(layerName,layer) {
-	var result = []
-	
-	
-	return result
-}
-
 function processLayer(layer) {
 	var result = []
 	if(layer && layer.isKindOfClass(MSShapeGroup)) {
@@ -102,12 +95,9 @@ function processLayer(layer) {
 		log("layer name " + layerName)
 
 		layer = [[layer layers] objectAtIndex:0]
-		if (layer) {
+		if (layer && layer.isVisible()) {
 			dump(layer)
-			if (layer.isKindOfClass(MSRectangleShape)) {
-				result = result.concat(processRectangleLayer(layerName,layer))
-			}
-			else if (layer.isKindOfClass(MSShapePathLayer)) {
+			if (layer.isKindOfClass(MSShapePathLayer)) {
 				result = result.concat(processBezierLayer(layerName,layer))
 			}
 			
