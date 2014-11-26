@@ -44,6 +44,83 @@ function isGroup(layer) {
   return [layer isMemberOfClass:[MSLayerGroup class]] || [layer isMemberOfClass:[MSArtboardGroup class]]
 }
 
+function processLayerStyle(layerName,layer) {
+	var result = []
+		
+	var layerStyle = [layer style]
+				
+	if ([[layerStyle fills] count]>0) {
+		var firstFill = null
+		for (var fillIndex = 0; fillIndex < [[layerStyle fills] count]; fillIndex++) {
+			var fill = [[layerStyle fills] objectAtIndex:fillIndex]
+			if ([fill isEnabled]) {
+				firstFill = fill
+				break;
+			}
+		}
+		
+		if (firstFill) {
+			var fillColor = [firstFill color]
+		
+			result = result.concat([
+				"",
+				"\t"+layerName+".fillColor = [UIColor colorWithRed:"+[fillColor red]+" green:"+[fillColor green]+" blue:"+[fillColor blue]+" alpha:"+[fillColor alpha]+"].CGColor;"
+			])				
+		}
+	}
+
+	if ([[layerStyle borders] count]>0) {
+		var firstBorder = null
+		for (var borderIndex = 0; borderIndex < [[layerStyle borders] count]; borderIndex++) {
+			var border = [[layerStyle borders] objectAtIndex:borderIndex]
+			if ([border isEnabled]) {
+				firstBorder = border
+				break;
+			}
+		}
+
+		if (firstBorder) {
+			var borderColor = [firstBorder color]
+			result = result.concat([
+				"",
+				"\t"+layerName+".strokeColor = [UIColor colorWithRed:"+[borderColor red]+" green:"+[borderColor green]+" blue:"+[borderColor blue]+" alpha:"+[borderColor alpha]+"].CGColor;",
+				"\t"+layerName+".lineWidth = "+[firstBorder thickness]+";"
+			])
+		}
+	}
+	
+	if ([[layerStyle shadows] count]>0) {
+		var firstShadow = null
+		for (var shadowIndex = 0; shadowIndex < [[layerStyle shadows] count]; shadowIndex++) {
+			var shadow = [[layerStyle shadows] objectAtIndex:shadowIndex]
+			if ([shadow isEnabled]) {
+				firstShadow = shadow
+				break;
+			}
+		}
+			
+		if (firstShadow) {
+			var shadowColor = [firstShadow color]
+			result = result.concat([
+				"",
+				"\t"+layerName+".shadowColor = [UIColor colorWithRed:"+[shadowColor red]+" green:"+[shadowColor green]+" blue:"+[shadowColor blue]+" alpha:"+[shadowColor alpha]+"].CGColor;",
+				"\t"+layerName+".shadowOffset = CGSizeMake("+[firstShadow offsetX]+","+-[firstShadow offsetY]+");",
+				"\t"+layerName+".shadowRadius = "+[firstShadow blurRadius]+";",
+				"\t"+layerName+".shadowOpacity = 1.0;"
+			])
+		}
+	}
+		
+	var opacity = [[[layer style] contextSettings] opacity]
+	
+	result = result.concat([
+		"",
+		"\t"+layerName+".opacity = " + opacity + ";"
+	])
+
+	return result
+}
+
 function processPoint(layerName,index,previousPoint,point,absoluteRect,rootFrame) {
 
 	// var proportionW = [absoluteRect width]/[rootFrame width]
@@ -133,69 +210,71 @@ function processBezierLayer(layer,rootFrame) {
 			"\t[self.layer insertSublayer:"+layerName+" atIndex:0];"
 		])
 		
-		var layerStyle = [parentLayer style]
-					
-		if ([[layerStyle fills] count]>0) {
-			var firstFill = null
-			for (var fillIndex = 0; fillIndex < [[layerStyle fills] count]; fillIndex++) {
-				var fill = [[layerStyle fills] objectAtIndex:fillIndex]
-				if ([fill isEnabled]) {
-					firstFill = fill
-					break;
-				}
-			}
-			
-			if (firstFill) {
-				var fillColor = [firstFill color]
-			
-				result = result.concat([
-					"",
-					"\t"+layerName+".fillColor = [UIColor colorWithRed:"+[fillColor red]+" green:"+[fillColor green]+" blue:"+[fillColor blue]+" alpha:"+[fillColor alpha]+"].CGColor;"
-				])				
-			}
-		}
-
-		if ([[layerStyle borders] count]>0) {
-			var firstBorder = null
-			for (var borderIndex = 0; borderIndex < [[layerStyle borders] count]; borderIndex++) {
-				var border = [[layerStyle borders] objectAtIndex:borderIndex]
-				if ([border isEnabled]) {
-					firstBorder = border
-					break;
-				}
-			}
-
-			if (firstBorder) {
-				var borderColor = [firstBorder color]
-				result = result.concat([
-					"",
-					"\t"+layerName+".strokeColor = [UIColor colorWithRed:"+[borderColor red]+" green:"+[borderColor green]+" blue:"+[borderColor blue]+" alpha:"+[borderColor alpha]+"].CGColor;",
-					"\t"+layerName+".lineWidth = "+[firstBorder thickness]+";"
-				])
-			}
-		}
+		result = result.concat(processLayerStyle(layerName,parentLayer))
 		
-		if ([[layerStyle shadows] count]>0) {
-			var firstShadow = null
-			for (var shadowIndex = 0; shadowIndex < [[layerStyle shadows] count]; shadowIndex++) {
-				var shadow = [[layerStyle shadows] objectAtIndex:shadowIndex]
-				if ([shadow isEnabled]) {
-					firstShadow = shadow
-					break;
-				}
-			}
-				
-			if (firstShadow) {
-				var shadowColor = [firstShadow color]
-				result = result.concat([
-					"",
-					"\t"+layerName+".shadowColor = [UIColor colorWithRed:"+[shadowColor red]+" green:"+[shadowColor green]+" blue:"+[shadowColor blue]+" alpha:"+[shadowColor alpha]+"].CGColor;",
-					"\t"+layerName+".shadowOffset = CGSizeMake("+[firstShadow offsetX]+","+-[firstShadow offsetY]+");",
-					"\t"+layerName+".shadowRadius = "+[firstShadow blurRadius]+";",
-					"\t"+layerName+".shadowOpacity = 1.0;"
-				])
-			}
-		}
+		// var layerStyle = [parentLayer style]
+//
+// 		if ([[layerStyle fills] count]>0) {
+// 			var firstFill = null
+// 			for (var fillIndex = 0; fillIndex < [[layerStyle fills] count]; fillIndex++) {
+// 				var fill = [[layerStyle fills] objectAtIndex:fillIndex]
+// 				if ([fill isEnabled]) {
+// 					firstFill = fill
+// 					break;
+// 				}
+// 			}
+//
+// 			if (firstFill) {
+// 				var fillColor = [firstFill color]
+//
+// 				result = result.concat([
+// 					"",
+// 					"\t"+layerName+".fillColor = [UIColor colorWithRed:"+[fillColor red]+" green:"+[fillColor green]+" blue:"+[fillColor blue]+" alpha:"+[fillColor alpha]+"].CGColor;"
+// 				])
+// 			}
+// 		}
+//
+// 		if ([[layerStyle borders] count]>0) {
+// 			var firstBorder = null
+// 			for (var borderIndex = 0; borderIndex < [[layerStyle borders] count]; borderIndex++) {
+// 				var border = [[layerStyle borders] objectAtIndex:borderIndex]
+// 				if ([border isEnabled]) {
+// 					firstBorder = border
+// 					break;
+// 				}
+// 			}
+//
+// 			if (firstBorder) {
+// 				var borderColor = [firstBorder color]
+// 				result = result.concat([
+// 					"",
+// 					"\t"+layerName+".strokeColor = [UIColor colorWithRed:"+[borderColor red]+" green:"+[borderColor green]+" blue:"+[borderColor blue]+" alpha:"+[borderColor alpha]+"].CGColor;",
+// 					"\t"+layerName+".lineWidth = "+[firstBorder thickness]+";"
+// 				])
+// 			}
+// 		}
+//
+// 		if ([[layerStyle shadows] count]>0) {
+// 			var firstShadow = null
+// 			for (var shadowIndex = 0; shadowIndex < [[layerStyle shadows] count]; shadowIndex++) {
+// 				var shadow = [[layerStyle shadows] objectAtIndex:shadowIndex]
+// 				if ([shadow isEnabled]) {
+// 					firstShadow = shadow
+// 					break;
+// 				}
+// 			}
+//
+// 			if (firstShadow) {
+// 				var shadowColor = [firstShadow color]
+// 				result = result.concat([
+// 					"",
+// 					"\t"+layerName+".shadowColor = [UIColor colorWithRed:"+[shadowColor red]+" green:"+[shadowColor green]+" blue:"+[shadowColor blue]+" alpha:"+[shadowColor alpha]+"].CGColor;",
+// 					"\t"+layerName+".shadowOffset = CGSizeMake("+[firstShadow offsetX]+","+-[firstShadow offsetY]+");",
+// 					"\t"+layerName+".shadowRadius = "+[firstShadow blurRadius]+";",
+// 					"\t"+layerName+".shadowOpacity = 1.0;"
+// 				])
+// 			}
+// 		}
 	}
 
 	return result
@@ -303,6 +382,7 @@ else {
 		}
 	
 		implementation.push("}")
+		implementation.push("")
 		implementation.push("@end")
 		implementation.push("")
 
