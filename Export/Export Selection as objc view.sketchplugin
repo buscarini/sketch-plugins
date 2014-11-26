@@ -8,6 +8,9 @@ function dump(obj){
   log("## obj class is: " + [obj className])
   log("######################################")
 
+  log("obj.mocha:")
+  log([obj class].mocha())
+
   log("obj.properties:")
   log([obj class].mocha().properties())
   log("obj.propertiesWithAncestors:")
@@ -23,6 +26,10 @@ function dump(obj){
   log("obj.instanceMethodsWithAncestors:")
   log([obj class].mocha().instanceMethodsWithAncestors())
 
+  log("obj.instanceVariables:")
+  log([obj class].mocha().instanceVariables())
+
+
   log("obj.protocols:")
   log([obj class].mocha().protocols())
   log("obj.protocolsWithAncestors:")
@@ -37,16 +44,19 @@ function isGroup(layer) {
   return [layer isMemberOfClass:[MSLayerGroup class]] || [layer isMemberOfClass:[MSArtboardGroup class]]
 }
 
-function processBezierLayer(layerName,layer) {
+function processBezierLayer(layerName,layer,parentLayer) {
 	var result = []
 	if(layer && layer.isKindOfClass(MSShapePathLayer)) {
 
+		var absoluteRect = [parentLayer frame]
+
 		var path = layer.path()
+		// var path = layer.bezierPathWithTransforms()
 			
-		log("2")
+		log("absoluteRect: " + [absoluteRect x] + " " + [absoluteRect y] + " " + [absoluteRect width] + " " + [absoluteRect height])
 		
 		result = result.concat([
-			"\tCAShapleLayer *" + layerName + " = [CAShapeLayer layer];",
+			"\tCAShapeLayer *" + layerName + " = [CAShapeLayer layer];",
 			"\tUIBezierPath *"+layerName+"Path = [UIBezierPath bezierPath];",
 			""
 		])
@@ -59,16 +69,31 @@ function processBezierLayer(layerName,layer) {
 			log("processing point: " + j)
 			
 		    var point = [points objectAtIndex:j]
+			var x = point.point().x*[absoluteRect width]+[absoluteRect x]
+			var y = point.point().y*[absoluteRect height]+[absoluteRect y]
+			var controlPoint1x = point.curveFrom().x*[absoluteRect width]+[absoluteRect x]
+			var controlPoint1y = point.curveFrom().y*[absoluteRect height]+[absoluteRect y]
+			var controlPoint2x = point.curveTo().x*[absoluteRect width]+[absoluteRect x]
+			var controlPoint2y = point.curveTo().y*[absoluteRect height]+[absoluteRect y]
 				
 			if (j==0) {
-				result.push("\t["+layerName+"Path moveToPoint:CGPointMake("+point.point().x+","+point.point().y+")];")
+				result.push("\t["+layerName+"Path moveToPoint:CGPointMake("+x+","+y+")];")
 			}
-			
-			if (point.curveFrom() && point.curveTo()) {
-				result.push("\t["+layerName+"Path addCurveToPoint:CGPointMake("+point.point().x+","+point.point().y+") controlPoint1:CGPointMake("+point.curveFrom().x+","+point.curveFrom().y+") controlPoint2:CGPointMake("+point.curveTo().x+","+point.curveTo().y+")];")
+			else if (point.curveFrom() && point.curveTo()) {
+				result.push("\t["+layerName+"Path addCurveToPoint:CGPointMake("+x+","+y+") controlPoint1:CGPointMake("+controlPoint1x+","+controlPoint1y+") controlPoint2:CGPointMake("+controlPoint2x+","+controlPoint2y+")];")
 			}
 			else {
-				result.push("\t["+layerName+"Path addLineToPoint:CGPointMake("+point.point().x+","+point.point().y+")];")
+				result.push("\t["+layerName+"Path addLineToPoint:CGPointMake("+x+","+y+")];")
+			}
+			
+			if (j==[points count]-1) {
+				point = [points objectAtIndex:0]
+				if (point.curveFrom() && point.curveTo()) {
+				result.push("\t["+layerName+"Path addCurveToPoint:CGPointMake("+x+","+y+") controlPoint1:CGPointMake("+controlPoint1x+","+controlPoint1y+") controlPoint2:CGPointMake("+controlPoint2x+","+controlPoint2y+")];")
+				}
+				else {
+					result.push("\t["+layerName+"Path addLineToPoint:CGPointMake("+x+","+y+")];")
+				}
 			}
 		}
 		
@@ -80,6 +105,20 @@ function processBezierLayer(layerName,layer) {
 			"\t[self.layer addSublayer:"+layerName+"];"
 		])
 		
+		var layerStyle = [parentLayer style]
+		var firstFill = [[layerStyle fills] objectAtIndex:0]
+		var fillColor = [firstFill color]
+			
+		var firstBorder = [[layerStyle borders] objectAtIndex:0]
+		var borderColor = [firstBorder color]
+		
+		result = result.concat([
+			"",
+			"\t"+layerName+".fillColor = [UIColor colorWithRed:"+[fillColor red]+" green:"+[fillColor green]+" blue:"+[fillColor blue]+" alpha:"+[fillColor alpha]+"].CGColor;",
+			"\t"+layerName+".strokeColor = [UIColor colorWithRed:"+[borderColor red]+" green:"+[borderColor green]+" blue:"+[borderColor blue]+" alpha:"+[borderColor alpha]+"].CGColor;",
+			"\t"+layerName+".lineWidth = "+[firstBorder thickness]+";",
+			""
+		])
 	}
 
 	return result
@@ -94,11 +133,11 @@ function processLayer(layer) {
 		var layerName = com.buscarini.normalizeName(layer.name())
 		log("layer name " + layerName)
 
-		layer = [[layer layers] objectAtIndex:0]
-		if (layer && layer.isVisible()) {
-			dump(layer)
-			if (layer.isKindOfClass(MSShapePathLayer)) {
-				result = result.concat(processBezierLayer(layerName,layer))
+		sublayer = [[layer layers] objectAtIndex:0]
+		if (sublayer && sublayer.isVisible()) {
+			dump(sublayer)
+			if (sublayer.isKindOfClass(MSShapePathLayer)) {
+				result = result.concat(processBezierLayer(layerName,sublayer,layer))
 			}
 			
 		} 
@@ -137,8 +176,10 @@ else {
 			
 		log("Final header and imp files: " + headerFile + " " + implementationFile)
 
-		var header = [	"#import <UIKit/UIKit.h>",
+		var header = [	""
+						,"#import <UIKit/UIKit.h>",
 						"",
+						"IB_DESIGNABLE",
 						"@interface " + viewName + " : UIView",
 						"",
 						"@end",
