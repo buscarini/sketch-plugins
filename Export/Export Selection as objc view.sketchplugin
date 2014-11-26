@@ -44,14 +44,25 @@ function isGroup(layer) {
   return [layer isMemberOfClass:[MSLayerGroup class]] || [layer isMemberOfClass:[MSArtboardGroup class]]
 }
 
-function processPoint(layerName,index,previousPoint,point,absoluteRect) {
+function processPoint(layerName,index,previousPoint,point,absoluteRect,rootFrame) {
+
+	// var proportionW = [absoluteRect width]/[rootFrame width]
+// 	var proportionH = [absoluteRect height]/[rootFrame height]
+//
+// 	log("Proportions:" + proportionW + " " + proportionH)
+//
+// 	var proportion = proportionW
+// 	if (proportionW>proportionH) proportion = proportionH
+	
+	var proportion = 1
+	
 	var result = []
-	var x = point.point().x*[absoluteRect width]+[absoluteRect x]
-	var y = point.point().y*[absoluteRect height]+[absoluteRect y]
-	var controlPoint1x = previousPoint.curveFrom().x*[absoluteRect width]+[absoluteRect x]
-	var controlPoint1y = previousPoint.curveFrom().y*[absoluteRect height]+[absoluteRect y]
-	var controlPoint2x = point.curveTo().x*[absoluteRect width]+[absoluteRect x]
-	var controlPoint2y = point.curveTo().y*[absoluteRect height]+[absoluteRect y]
+	var x = (point.point().x*[absoluteRect width]+[absoluteRect x])*proportion
+	var y = (point.point().y*[absoluteRect height]+[absoluteRect y])*proportion
+	var controlPoint1x = (previousPoint.curveFrom().x*[absoluteRect width]+[absoluteRect x])*proportion
+	var controlPoint1y = (previousPoint.curveFrom().y*[absoluteRect height]+[absoluteRect y])*proportion
+	var controlPoint2x = (point.curveTo().x*[absoluteRect width]+[absoluteRect x])*proportion
+	var controlPoint2y = (point.curveTo().y*[absoluteRect height]+[absoluteRect y])*proportion
 	
 	if (index==0) {
 		result.push("\t["+layerName+"Path moveToPoint:CGPointMake("+x+","+y+")];")
@@ -78,7 +89,6 @@ function processBezierLayer(layer,rootFrame) {
 		var layerName = com.buscarini.nameForVariable(parentLayer.name())
 
 		var path = layer.path()
-		// var path = layer.bezierPathWithTransforms()
 			
 		log("absoluteRect: " + [absoluteRect x] + " " + [absoluteRect y] + " " + [absoluteRect width] + " " + [absoluteRect height])
 		
@@ -105,37 +115,13 @@ function processBezierLayer(layer,rootFrame) {
 			    previousPoint = [points objectAtIndex:j-1]
 			}
 			
-			result = result.concat(processPoint(layerName,j,previousPoint,point,absoluteRect))			
-
-			// var x = point.point().x*[absoluteRect width]+[absoluteRect x]
-// 			var y = point.point().y*[absoluteRect height]+[absoluteRect y]
-// 			var controlPoint1x = point.curveTo().x*[absoluteRect width]+[absoluteRect x]
-// 			var controlPoint1y = point.curveTo().y*[absoluteRect height]+[absoluteRect y]
-// 			var controlPoint2x = point.curveFrom().x*[absoluteRect width]+[absoluteRect x]
-// 			var controlPoint2y = point.curveFrom().y*[absoluteRect height]+[absoluteRect y]
-//
-// 			if (j==0) {
-// 				result.push("\t["+layerName+"Path moveToPoint:CGPointMake("+x+","+y+")];")
-// 			}
-// 			else if (point.curveFrom() && point.curveTo()) {
-// 				result.push("\t["+layerName+"Path addCurveToPoint:CGPointMake("+x+","+y+") controlPoint1:CGPointMake("+controlPoint1x+","+controlPoint1y+") controlPoint2:CGPointMake("+controlPoint2x+","+controlPoint2y+")];")
-// 			}
-// 			else {
-// 				result.push("\t["+layerName+"Path addLineToPoint:CGPointMake("+x+","+y+")];")
-// 			}
+			result = result.concat(processPoint(layerName,j,previousPoint,point,absoluteRect,rootFrame))			
 			
 			if (j==[points count]-1) {
 				point = [points objectAtIndex:0]
 				
 			    previousPoint = [points objectAtIndex:j]
-				result = result.concat(processPoint(layerName,j,previousPoint,point,absoluteRect))
-				
-				// if (point.curveFrom() && point.curveTo()) {
-				// result.push("\t["+layerName+"Path addCurveToPoint:CGPointMake("+x+","+y+") controlPoint1:CGPointMake("+controlPoint1x+","+controlPoint1y+") controlPoint2:CGPointMake("+controlPoint2x+","+controlPoint2y+")];")
-				// }
-				// else {
-				// 	result.push("\t["+layerName+"Path addLineToPoint:CGPointMake("+x+","+y+")];")
-				// }
+				result = result.concat(processPoint(layerName,j,previousPoint,point,absoluteRect,rootFrame))
 			}
 		}
 		
@@ -148,19 +134,68 @@ function processBezierLayer(layer,rootFrame) {
 		])
 		
 		var layerStyle = [parentLayer style]
-		var firstFill = [[layerStyle fills] objectAtIndex:0]
-		var fillColor = [firstFill color]
+					
+		if ([[layerStyle fills] count]>0) {
+			var firstFill = null
+			for (var fillIndex = 0; fillIndex < [[layerStyle fills] count]; fillIndex++) {
+				var fill = [[layerStyle fills] objectAtIndex:fillIndex]
+				if ([fill isEnabled]) {
+					firstFill = fill
+					break;
+				}
+			}
 			
-		var firstBorder = [[layerStyle borders] objectAtIndex:0]
-		var borderColor = [firstBorder color]
+			if (firstFill) {
+				var fillColor = [firstFill color]
+			
+				result = result.concat([
+					"",
+					"\t"+layerName+".fillColor = [UIColor colorWithRed:"+[fillColor red]+" green:"+[fillColor green]+" blue:"+[fillColor blue]+" alpha:"+[fillColor alpha]+"].CGColor;"
+				])				
+			}
+		}
+
+		if ([[layerStyle borders] count]>0) {
+			var firstBorder = null
+			for (var borderIndex = 0; borderIndex < [[layerStyle borders] count]; borderIndex++) {
+				var border = [[layerStyle borders] objectAtIndex:borderIndex]
+				if ([border isEnabled]) {
+					firstBorder = border
+					break;
+				}
+			}
+
+			if (firstBorder) {
+				var borderColor = [firstBorder color]
+				result = result.concat([
+					"",
+					"\t"+layerName+".strokeColor = [UIColor colorWithRed:"+[borderColor red]+" green:"+[borderColor green]+" blue:"+[borderColor blue]+" alpha:"+[borderColor alpha]+"].CGColor;",
+					"\t"+layerName+".lineWidth = "+[firstBorder thickness]+";"
+				])
+			}
+		}
 		
-		result = result.concat([
-			"",
-			"\t"+layerName+".fillColor = [UIColor colorWithRed:"+[fillColor red]+" green:"+[fillColor green]+" blue:"+[fillColor blue]+" alpha:"+[fillColor alpha]+"].CGColor;",
-			"\t"+layerName+".strokeColor = [UIColor colorWithRed:"+[borderColor red]+" green:"+[borderColor green]+" blue:"+[borderColor blue]+" alpha:"+[borderColor alpha]+"].CGColor;",
-			"\t"+layerName+".lineWidth = "+[firstBorder thickness]+";",
-			""
-		])
+		if ([[layerStyle shadows] count]>0) {
+			var firstShadow = null
+			for (var shadowIndex = 0; shadowIndex < [[layerStyle shadows] count]; shadowIndex++) {
+				var shadow = [[layerStyle shadows] objectAtIndex:shadowIndex]
+				if ([shadow isEnabled]) {
+					firstShadow = shadow
+					break;
+				}
+			}
+				
+			if (firstShadow) {
+				var shadowColor = [firstShadow color]
+				result = result.concat([
+					"",
+					"\t"+layerName+".shadowColor = [UIColor colorWithRed:"+[shadowColor red]+" green:"+[shadowColor green]+" blue:"+[shadowColor blue]+" alpha:"+[shadowColor alpha]+"].CGColor;",
+					"\t"+layerName+".shadowOffset = CGSizeMake("+[firstShadow offsetX]+","+-[firstShadow offsetY]+");",
+					"\t"+layerName+".shadowRadius = "+[firstShadow blurRadius]+";",
+					"\t"+layerName+".shadowOpacity = 1.0;"
+				])
+			}
+		}
 	}
 
 	return result
@@ -264,21 +299,7 @@ else {
 
 		for (var i=0; i<[selection count]; i++) {
 			var layer = [selection objectAtIndex:i];
-
-			log("processing layer: " + layer)
-			
-			implementation = implementation.concat(processLayer(layer,layer.frame()))
-			
-			// if (isGroup(layer)) {
-			//     var sublayers = [layer layers];
-			//     for (var sub=([sublayers count] - 1); sub >= 0; sub--) {
-			//         var sublayer = [sublayers objectAtIndex:sub]
-			// 		implementation = implementation.concat(processLayer(sublayer))
-			// 	}
-			// }
-			// else {
-			// 	implementation = implementation.concat(processLayer(layer))
-			// }
+			implementation = implementation.concat(processLayer(layer,layer.frame()))			
 		}
 	
 		implementation.push("}")
