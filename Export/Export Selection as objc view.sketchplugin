@@ -44,6 +44,28 @@ function isGroup(layer) {
   return [layer isMemberOfClass:[MSLayerGroup class]] || [layer isMemberOfClass:[MSArtboardGroup class]]
 }
 
+function processPoint(layerName,index,previousPoint,point,absoluteRect) {
+	var result = []
+	var x = point.point().x*[absoluteRect width]+[absoluteRect x]
+	var y = point.point().y*[absoluteRect height]+[absoluteRect y]
+	var controlPoint1x = previousPoint.curveFrom().x*[absoluteRect width]+[absoluteRect x]
+	var controlPoint1y = previousPoint.curveFrom().y*[absoluteRect height]+[absoluteRect y]
+	var controlPoint2x = point.curveTo().x*[absoluteRect width]+[absoluteRect x]
+	var controlPoint2y = point.curveTo().y*[absoluteRect height]+[absoluteRect y]
+	
+	if (index==0) {
+		result.push("\t["+layerName+"Path moveToPoint:CGPointMake("+x+","+y+")];")
+	}
+	else if (point.curveFrom() && point.curveTo()) {
+		result.push("\t["+layerName+"Path addCurveToPoint:CGPointMake("+x+","+y+") controlPoint1:CGPointMake("+controlPoint1x+","+controlPoint1y+") controlPoint2:CGPointMake("+controlPoint2x+","+controlPoint2y+")];")
+	}
+	else {
+		result.push("\t["+layerName+"Path addLineToPoint:CGPointMake("+x+","+y+")];")
+	}
+	
+	return result
+}
+
 function processBezierLayer(layer,rootFrame) {
 	log("processing bezier layer " + layer)
 	
@@ -72,33 +94,48 @@ function processBezierLayer(layer,rootFrame) {
 		for (var j = 0; j < [points count]; j++) {
 			
 			log("processing point: " + j)
-			
+
 		    var point = [points objectAtIndex:j]
-			var x = point.point().x*[absoluteRect width]+[absoluteRect x]
-			var y = point.point().y*[absoluteRect height]+[absoluteRect y]
-			var controlPoint1x = point.curveFrom().x*[absoluteRect width]+[absoluteRect x]
-			var controlPoint1y = point.curveFrom().y*[absoluteRect height]+[absoluteRect y]
-			var controlPoint2x = point.curveTo().x*[absoluteRect width]+[absoluteRect x]
-			var controlPoint2y = point.curveTo().y*[absoluteRect height]+[absoluteRect y]
-				
+
+			var previousPoint = null				
 			if (j==0) {
-				result.push("\t["+layerName+"Path moveToPoint:CGPointMake("+x+","+y+")];")
-			}
-			else if (point.curveFrom() && point.curveTo()) {
-				result.push("\t["+layerName+"Path addCurveToPoint:CGPointMake("+x+","+y+") controlPoint1:CGPointMake("+controlPoint1x+","+controlPoint1y+") controlPoint2:CGPointMake("+controlPoint2x+","+controlPoint2y+")];")
+			    previousPoint = [points objectAtIndex:[points count]-1]
 			}
 			else {
-				result.push("\t["+layerName+"Path addLineToPoint:CGPointMake("+x+","+y+")];")
+			    previousPoint = [points objectAtIndex:j-1]
 			}
+			
+			result = result.concat(processPoint(layerName,j,previousPoint,point,absoluteRect))			
+
+			// var x = point.point().x*[absoluteRect width]+[absoluteRect x]
+// 			var y = point.point().y*[absoluteRect height]+[absoluteRect y]
+// 			var controlPoint1x = point.curveTo().x*[absoluteRect width]+[absoluteRect x]
+// 			var controlPoint1y = point.curveTo().y*[absoluteRect height]+[absoluteRect y]
+// 			var controlPoint2x = point.curveFrom().x*[absoluteRect width]+[absoluteRect x]
+// 			var controlPoint2y = point.curveFrom().y*[absoluteRect height]+[absoluteRect y]
+//
+// 			if (j==0) {
+// 				result.push("\t["+layerName+"Path moveToPoint:CGPointMake("+x+","+y+")];")
+// 			}
+// 			else if (point.curveFrom() && point.curveTo()) {
+// 				result.push("\t["+layerName+"Path addCurveToPoint:CGPointMake("+x+","+y+") controlPoint1:CGPointMake("+controlPoint1x+","+controlPoint1y+") controlPoint2:CGPointMake("+controlPoint2x+","+controlPoint2y+")];")
+// 			}
+// 			else {
+// 				result.push("\t["+layerName+"Path addLineToPoint:CGPointMake("+x+","+y+")];")
+// 			}
 			
 			if (j==[points count]-1) {
 				point = [points objectAtIndex:0]
-				if (point.curveFrom() && point.curveTo()) {
-				result.push("\t["+layerName+"Path addCurveToPoint:CGPointMake("+x+","+y+") controlPoint1:CGPointMake("+controlPoint1x+","+controlPoint1y+") controlPoint2:CGPointMake("+controlPoint2x+","+controlPoint2y+")];")
-				}
-				else {
-					result.push("\t["+layerName+"Path addLineToPoint:CGPointMake("+x+","+y+")];")
-				}
+				
+			    previousPoint = [points objectAtIndex:j]
+				result = result.concat(processPoint(layerName,j,previousPoint,point,absoluteRect))
+				
+				// if (point.curveFrom() && point.curveTo()) {
+				// result.push("\t["+layerName+"Path addCurveToPoint:CGPointMake("+x+","+y+") controlPoint1:CGPointMake("+controlPoint1x+","+controlPoint1y+") controlPoint2:CGPointMake("+controlPoint2x+","+controlPoint2y+")];")
+				// }
+				// else {
+				// 	result.push("\t["+layerName+"Path addLineToPoint:CGPointMake("+x+","+y+")];")
+				// }
 			}
 		}
 		
