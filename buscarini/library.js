@@ -20,6 +20,10 @@ com.buscarini = {
 		if (blue>1) blue=1
 		[color setBlue:blue]
 	},
+	normalizeName: function(name) {
+		name = name.replace(/\s+/g, '')
+		return name
+	},
 	removeAllFills: function(layer) {
 		layerStyle = [layer style]
 		fills = [layerStyle fills]
@@ -95,6 +99,7 @@ com.buscarini = {
 		[color setGreen:green];
 		[color setBlue:blue];
 	},
+	
 	scaleLayerToSize: function(layer,width,height,round) {
 		
 		if (round==undefined) round = true;
@@ -112,6 +117,19 @@ com.buscarini = {
 		oldWidth = [frame width]
 		oldHeight = [frame height]
 		proportion = width/oldWidth
+		hProportion = height/oldHeight
+		
+		if (proportion==hProportion) {
+			var midX=layer.frame().midX();
+			var midY=layer.frame().midY();
+
+			layer.multiplyBy(proportion);
+
+			// Translate frame to the original center point.
+			layer.frame().midX = midX;
+			layer.frame().midY = midY;
+			return
+		}
 		
 		// borders = [[layer style] borders];
 // 		for (var w=0;w<borders.length();w++) {

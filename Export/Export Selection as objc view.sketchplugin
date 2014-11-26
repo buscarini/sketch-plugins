@@ -1,0 +1,190 @@
+// Export Selection as Objective-C view
+
+#import '../buscarini/library.js'
+
+function dump(obj){
+  log("######################################")
+  log("## Dumping object " + obj )
+  log("## obj class is: " + [obj className])
+  log("######################################")
+
+  log("obj.properties:")
+  log([obj class].mocha().properties())
+  log("obj.propertiesWithAncestors:")
+  log([obj class].mocha().propertiesWithAncestors())
+
+  log("obj.classMethods:")
+  log([obj class].mocha().classMethods())
+  log("obj.classMethodsWithAncestors:")
+  log([obj class].mocha().classMethodsWithAncestors())
+
+  log("obj.instanceMethods:")
+  log([obj class].mocha().instanceMethods())
+  log("obj.instanceMethodsWithAncestors:")
+  log([obj class].mocha().instanceMethodsWithAncestors())
+
+  log("obj.protocols:")
+  log([obj class].mocha().protocols())
+  log("obj.protocolsWithAncestors:")
+  log([obj class].mocha().protocolsWithAncestors())
+
+  log("obj.treeAsDictionary():")
+  log(obj.treeAsDictionary())
+}
+
+
+function isGroup(layer) {
+  return [layer isMemberOfClass:[MSLayerGroup class]] || [layer isMemberOfClass:[MSArtboardGroup class]]
+}
+
+function processLayer(layer) {
+	var result = []
+	if(layer && layer.isKindOfClass(MSShapeGroup)) {
+
+		log("1")
+
+		layer = [[layer layers] objectAtIndex:0]
+
+
+		dump(layer)
+
+
+		var path = layer.path()
+			
+		log("2")
+			
+
+		var layerName = com.buscarini.normalizeName(layer.name())
+		log("layer name " + layerName)
+		
+		result = result.concat([
+			"\tCAShapleLayer *" + layerName + " = [CAShapeLayer layer];",
+			"\tUIBezierPath *"+layerName+"Path = [UIBezierPath bezierPath];",
+			""
+		])
+
+		log("processing points")
+
+		var points = path.points()
+		for (var j = 0; j < [points count]; j++) {
+			
+			log("processing point: " + j)
+			
+		    var point = [points objectAtIndex:j]
+				
+			if (j==0) {
+				result.push("\t["+layerName+"Path moveToPoint:CGPointMake("+point.point().x+","+point.point().y+" )];")
+			}
+			else {
+				result.push("\t["+layerName+"Path addLineToPoint:CGPointMake("+point.point().x+","+point.point().y+" )];")
+			}
+		}
+		
+		result = result.concat([
+			"\t["+layerName+"Path closePath];",
+			"",
+			"\t"+layerName+".path = "+layerName+"Path.CGPath;",
+			"",
+			"\t[self.layer addSublayer:self.arrowLayer];"
+		])
+		
+	}
+
+	return result
+}
+
+if ([selection count]<=0) {
+	[doc showMessage:"Nothing selected"];
+}
+else {
+	var viewName = null
+	if ([selection count]==1) {
+		var selectedLayer = selection[0]
+		viewName = com.buscarini.normalizeName(selectedLayer.name())
+	}
+	else {
+		viewName = com.buscarini.normalizeName([doc askForUserInput:"View class name?" initialValue:"MyView"])
+	}
+	
+	var panel = [NSOpenPanel openPanel]
+		log("panel " + panel)
+	[panel setAllowsMultipleSelection:false];
+	[panel setCanChooseDirectories:true];
+	[panel setCanChooseFiles:false];
+	
+	var result = [panel runModal]
+	log("path choose result: " + result)
+		
+	if (result == NSFileHandlingPanelOKButton) {
+		var path = [[panel URLs] lastObject];
+	
+		var headerFile = [path URLByAppendingPathComponent:viewName + ".h"]
+		var implementationFile = [path URLByAppendingPathComponent:viewName + ".m"]
+			
+		log("Final header and imp files: " + headerFile + " " + implementationFile)
+
+		var header = [	"#import <UIKit/UIKit.h>",
+						"",
+						"@interface " + viewName + " : UIView",
+						"",
+						"@end",
+						""
+						]
+
+		var implementation = [ 	"#import \"" + viewName + ".h\"",
+								"",
+								"#import <QuartzCore/QuartzCore.h>",
+								"",
+								"@interface " + viewName + "() {",
+								"}",
+								"@end",
+								"",
+								"@implementation "+viewName+"",
+								"",
+								"- (void) performInit {"
+								]
+
+		for (var i=0; i<[selection count]; i++) {
+			var layer = [selection objectAtIndex:i];
+
+			log("processing layer: " + layer)
+			
+			if (isGroup(layer)) {
+			    var sublayers = [layer layers];
+			    for (var sub=([sublayers count] - 1); sub >= 0; sub--) {
+			        var sublayer = [sublayers objectAtIndex:sub]
+					implementation = implementation.concat(processLayer(sublayer))
+				}
+			}
+			else {
+				implementation = implementation.concat(processLayer(layer))
+			}		
+		}
+	
+		implementation.push("}")
+		implementation.push("@end")
+		implementation.push("")
+
+		log("Writing files")
+
+		var fileManager = [NSFileManager defaultManager];
+	
+		header = header.join('\n')
+		implementation = implementation.join('\n')
+		
+		var headerString = [NSString stringWithString:header]
+
+		if ([headerString writeToURL:headerFile atomically:true encoding:NSUTF8StringEncoding error:null]) {
+			var implementationString = [NSString stringWithString:implementation]
+			if ([implementationString writeToURL:implementationFile atomically:true encoding:NSUTF8StringEncoding error:null]) {
+				[doc showMessage:"Done"];
+			}			
+			else {
+				[doc showMessage:"Error writing files"];				
+			}
+		}
+		else {
+			[doc showMessage:"Error writing files"];
+		}
+	}
+}
