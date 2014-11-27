@@ -90,7 +90,7 @@ function finalViewName(name) {
 	var viewName = com.buscarini.normalizeName(name)
 	var suffix = "View"
 	if (viewName.substr(-suffix.length,suffix.length).toLowerCase()!=suffix.toLowerCase()) {
-		viewName +=  suffix
+		viewName += suffix
 	}
 	return viewName
 }
@@ -423,7 +423,7 @@ else {
 	var viewName = null
 	if ([selection count]==1) {
 		var selectedLayer = selection[0]
-		viewName = com.buscarini.normalizeName(selectedLayer.name())
+		viewName = finalViewName(selectedLayer.name())
 	}
 	else {
 		// viewName = com.buscarini.normalizeName([doc askForUserInput:"View class name?" initialValue:"MyView"])
