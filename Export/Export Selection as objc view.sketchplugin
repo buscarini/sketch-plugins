@@ -158,19 +158,33 @@ function processLayerStyle(layerName,layer,generationInfo,header,implementationI
 			performInit.push(
 				"",
 				"\tself."+layerName+".shadowColor = [UIColor colorWithRed:"+[shadowColor red]+" green:"+[shadowColor green]+" blue:"+[shadowColor blue]+" alpha:"+[shadowColor alpha]+"].CGColor;",
-				"\tself."+layerName+".shadowOffset = CGSizeMake("+[firstShadow offsetX]+","+-[firstShadow offsetY]+");",
+				"\tself."+layerName+".shadowOffset = CGSizeMake("+[firstShadow offsetX]+","+[firstShadow offsetY]+");",
 				"\tself."+layerName+".shadowRadius = "+[firstShadow blurRadius]+";",
 				"\tself."+layerName+".shadowOpacity = 1.0;"
 			)
 		}
 	}
-		
+	
 	var opacity = [[[layer style] contextSettings] opacity]
 	
 	performInit.push(
 		"",
 		"\tself."+layerName+".opacity = " + opacity + ";"
 	)
+	
+	if ([layer isFlippedHorizontal]) {
+		performInit.push(
+			"",
+			"\tself."+layerName+".transform = CATransform3DRotate(self."+layerName+".transform,M_PI, 0, 1, 0);"
+		)
+	}
+	
+	if ([layer isFlippedVertical]) {
+		performInit.push(
+			"",
+			"\tself."+layerName+".transform = CATransform3DRotate(self."+layerName+".transform,M_PI, 1, 0, 0);"
+		)
+	}
 }
 
 function processPoint(layerName,index,previousPoint,point,absoluteRect,rootFrame,generationInfo,header,implementationInterface,implementation,performInit,layoutSubviews) {
@@ -289,7 +303,7 @@ function processBezierLayer(layer,rootFrame,generationInfo,header,implementation
 		
 		layoutSubviews.push(
 			"\t// " + layerName,
-			"\tCGRect "+layerName+"BoundingBox = CGPathGetBoundingBox(self."+layerName+".path);",
+			"\tCGRect "+layerName+"BoundingBox = CGRectMake(0,0,"+[rootFrame width]+","+[rootFrame height]+");",//"CGPathGetBoundingBox(self."+layerName+".path);",
 	        "\t",
 			"\tCGFloat "+layerName+"BoundingBoxAspectRatio = CGRectGetWidth("+layerName+"BoundingBox)/CGRectGetHeight("+layerName+"BoundingBox);",
 			"\tCGFloat "+layerName+"ViewAspectRatio = CGRectGetWidth(self.frame)/CGRectGetHeight(self.frame);",
