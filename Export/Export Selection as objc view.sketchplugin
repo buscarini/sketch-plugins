@@ -44,6 +44,36 @@ function isGroup(layer) {
   return [layer isMemberOfClass:[MSLayerGroup class]] || [layer isMemberOfClass:[MSArtboardGroup class]]
 }
 
+function readAnimationParameters(layer) {
+	var pattern = /(.*)_animation\((.*)\)/gm
+	var layerName = layer.name()
+	var match = pattern.exec(layerName)
+	if (match==null) return null
+	
+	var animatedLayerName = match[1]
+	var parameters = match[2]
+	var paramsArray = parameters.split(",")
+		
+	var info = { layerName: animatedLayerName }
+
+	var animationName = paramsArray.shift()
+	var duration = paramsArray.shift()
+	var repeatCount = paramsArray.shift()
+
+	if (animationName) info.animationName = animationName
+	if (duration) info.duration = duration
+	if (repeatCount) info.repeatCount = repeatCount
+
+	return info
+}
+
+function isAnimation(layer) {
+	var info = readAnimationParameters(layer)
+	if (info==null) return false
+	return true
+}
+
+
 function processLayerStyle(layerName,layer,header,implementationInterface,implementation,performInit,layoutSubviews) {
 		
 	var layerStyle = [layer style]
@@ -148,24 +178,16 @@ function processPoint(layerName,index,previousPoint,point,absoluteRect,rootFrame
 	}
 }
 
-function processBezierLayer(layer,rootFrame,header,implementationInterface,implementation,performInit,layoutSubviews) {
-	log("processing bezier layer " + layer)
+function processBezierLayerPath(layer,layerName,rootFrame,header,implementationInterface,implementation,performInit,layoutSubviews) {
+	log("processing bezier layer path " + layer)
 	
 	if(layer && layer.isKindOfClass(MSShapePathLayer)) {
 
 		var parentLayer = [layer parentGroup]
 		var absoluteRect = [parentLayer frame]
-			
-		var layerName = com.buscarini.nameForVariable(parentLayer.name()) + "Layer"
 
 		var path = layer.path()
-			
-		log("absoluteRect: " + [absoluteRect x] + " " + [absoluteRect y] + " " + [absoluteRect width] + " " + [absoluteRect height])
-		
-		implementationInterface.push(
-			"@property (nonatomic, strong) CAShapeLayer *" + layerName + ";"
-		)
-		
+				
 		implementation.push(
 			"- (UIBezierPath *) new"+layerName+"Path {",
 			"\tUIBezierPath *"+layerName+"Path = [UIBezierPath bezierPath];",
@@ -206,6 +228,25 @@ function processBezierLayer(layer,rootFrame,header,implementationInterface,imple
 			"}",
 			""
 		)
+	}	
+}
+
+function processBezierLayer(layer,rootFrame,header,implementationInterface,implementation,performInit,layoutSubviews) {
+	log("processing bezier layer " + layer)
+	
+	if(layer && layer.isKindOfClass(MSShapePathLayer)) {
+
+		var parentLayer = [layer parentGroup]
+		var absoluteRect = [parentLayer frame]
+			
+		var layerName = com.buscarini.nameForVariable(parentLayer.name()) + "Layer"
+		
+		implementationInterface.push(
+			"@property (nonatomic, strong) CAShapeLayer *" + layerName + ";"
+		)
+
+		processBezierLayerPath(layer,layerName,rootFrame,header,implementationInterface,implementation,performInit,layoutSubviews)
+		
 		performInit.push(
 			"\t// " + layerName,
 			"\tself."+layerName+" = [CAShapeLayer layer];",
@@ -252,16 +293,49 @@ function processBezierLayer(layer,rootFrame,header,implementationInterface,imple
 	}
 }
 
+function processLayerAnimation(layer,rootFrame,header,implementationInterface,implementation,performInit,layoutSubviews) {
+	log("processing layer animation for " + layer)
+	
+	var layerName = layer.name()
+		
+	var animationInfo = readAnimationParameters(layer)
+		
+	// Process sublayers
+    var sublayers = [layer layers];
+    for (var sub=([sublayers count] - 1); sub >= 0; sub--) {
+        var sublayer = [sublayers objectAtIndex:sub]
+		// processLayer(sublayer,rootFrame,header,implementationInterface,implementation,performInit,layoutSubviews)
+	}
+	
+	implementation.push(
+		"- (void) "+animationInfo.animationName+" {",
+		"\tCABasicAnimation *animation = [CABasicAnimation animationWithKeyPath:@\"path\"];",
+		"\tanimation.duration = "+animationInfo.duration+";",
+		"\tanimation.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut];",
+		"\tanimation.repeatCount = "+animationInfo.repeatCount+";",
+		"\tanimation.autoreverses = YES;",
+		"\tanimation.fromValue = "+animationInfo.fromValue+";",
+		"\tanimation.toValue = "+animationInfo.toValue+";",
+		"\t[self.path1Layer addAnimation:animation forKey:@\"animatePath\"];",
+		"}"
+	)
+}
+
 function processLayer(layer,rootFrame,header,implementationInterface,implementation,performInit,layoutSubviews) {
 	log("processing layer " + layer)
 
 	if (!layer || !layer.isVisible()) return
 			
 	if (isGroup(layer)) {
-	    var sublayers = [layer layers];
-	    for (var sub=([sublayers count] - 1); sub >= 0; sub--) {
-	        var sublayer = [sublayers objectAtIndex:sub]
-			processLayer(sublayer,rootFrame,header,implementationInterface,implementation,performInit,layoutSubviews)
+		if (isAnimation(layer)) {
+			processLayerAnimation(layer,rootFrame,header,implementationInterface,implementation,performInit,layoutSubviews)
+		}
+		else {
+		    var sublayers = [layer layers];
+		    for (var sub=([sublayers count] - 1); sub >= 0; sub--) {
+		        var sublayer = [sublayers objectAtIndex:sub]
+				processLayer(sublayer,rootFrame,header,implementationInterface,implementation,performInit,layoutSubviews)
+			}			
 		}
 	}
 	else if (layer.isKindOfClass(MSShapeGroup))  {
