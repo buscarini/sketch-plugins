@@ -86,6 +86,19 @@ function finalLayerName(layer) {
 	return finalLayerNameFromString(layer.name())
 }
 
+function finalViewName(name) {
+	var viewName = com.buscarini.normalizeName(name)
+	var suffix = "View"
+	if (viewName.substr(-suffix.length,suffix.length).toLowerCase()!=suffix.toLowerCase()) {
+		viewName +=  suffix
+	}
+	return viewName
+}
+
+function firstLetterUppercase(string) {
+	return string.charAt(0).toUpperCase() + string.slice(1);
+}
+
 function processLayerStyle(layerName,layer,generationInfo,header,implementationInterface,implementation,performInit,layoutSubviews) {
 		
 	var layerStyle = [layer style]
@@ -201,7 +214,7 @@ function processBezierLayerPath(layer,rootFrame,generationInfo,header,implementa
 
 		var path = layer.path()
 				
-		var methodName = "new"+layerName+"Path"
+		var methodName = "new"+firstLetterUppercase(layerName)+"Path"
 		generationInfo.methods.paths.push(methodName)
 				
 		implementation.push(
@@ -244,6 +257,8 @@ function processBezierLayerPath(layer,rootFrame,generationInfo,header,implementa
 			"}",
 			""
 		)
+		
+		return methodName
 	}	
 }
 
@@ -261,12 +276,12 @@ function processBezierLayer(layer,rootFrame,generationInfo,header,implementation
 			"@property (nonatomic, strong) CAShapeLayer *" + layerName + ";"
 		)
 
-		processBezierLayerPath(layer,rootFrame,generationInfo,header,implementationInterface,implementation,performInit,layoutSubviews)
+		var methodName = processBezierLayerPath(layer,rootFrame,generationInfo,header,implementationInterface,implementation,performInit,layoutSubviews)
 		
 		performInit.push(
 			"\t// " + layerName,
 			"\tself."+layerName+" = [CAShapeLayer layer];",
-			"\tself."+layerName+".path = [self new"+layerName+"Path].CGPath;",
+			"\tself."+layerName+".path = [self "+methodName+"].CGPath;",
 			"",
 			"\t[self.layer insertSublayer:self."+layerName+" atIndex:0];",
 			""
@@ -397,7 +412,8 @@ else {
 		viewName = com.buscarini.normalizeName(selectedLayer.name())
 	}
 	else {
-		viewName = com.buscarini.normalizeName([doc askForUserInput:"View class name?" initialValue:"MyView"])
+		// viewName = com.buscarini.normalizeName([doc askForUserInput:"View class name?" initialValue:"MyView"])
+		viewName = finalViewName([doc askForUserInput:"View class name?" initialValue:"MyView"])
 	}
 	
 	var panel = [NSOpenPanel openPanel]
