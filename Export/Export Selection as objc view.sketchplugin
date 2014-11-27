@@ -138,13 +138,13 @@ function processPoint(layerName,index,previousPoint,point,absoluteRect,rootFrame
 	var controlPoint2y = (point.curveTo().y*[absoluteRect height]+[absoluteRect y])*proportion
 	
 	if (index==0) {
-		performInit.push("\t["+layerName+"Path moveToPoint:CGPointMake("+x+","+y+")];")
+		implementation.push("\t["+layerName+"Path moveToPoint:CGPointMake("+x+","+y+")];")
 	}
 	else if (point.curveFrom() && point.curveTo()) {
-		performInit.push("\t["+layerName+"Path addCurveToPoint:CGPointMake("+x+","+y+") controlPoint1:CGPointMake("+controlPoint1x+","+controlPoint1y+") controlPoint2:CGPointMake("+controlPoint2x+","+controlPoint2y+")];")
+		implementation.push("\t["+layerName+"Path addCurveToPoint:CGPointMake("+x+","+y+") controlPoint1:CGPointMake("+controlPoint1x+","+controlPoint1y+") controlPoint2:CGPointMake("+controlPoint2x+","+controlPoint2y+")];")
 	}
 	else {
-		performInit.push("\t["+layerName+"Path addLineToPoint:CGPointMake("+x+","+y+")];")
+		implementation.push("\t["+layerName+"Path addLineToPoint:CGPointMake("+x+","+y+")];")
 	}
 }
 
@@ -166,8 +166,8 @@ function processBezierLayer(layer,rootFrame,header,implementationInterface,imple
 			"@property (nonatomic, strong) CAShapeLayer *" + layerName + ";"
 		)
 		
-		performInit.push(
-			"\tself."+layerName+" = [CAShapeLayer layer];",
+		implementation.push(
+			"- (UIBezierPath *) new"+layerName+"Path {",
 			"\tUIBezierPath *"+layerName+"Path = [UIBezierPath bezierPath];",
 			""
 		)
@@ -199,16 +199,24 @@ function processBezierLayer(layer,rootFrame,header,implementationInterface,imple
 			}
 		}
 		
-		performInit.push(
+		implementation.push(
 			"\t["+layerName+"Path closePath];",
 			"",
-			"\tself."+layerName+".path = "+layerName+"Path.CGPath;",
+			"\treturn "+layerName+"Path;",
+			"}",
+			""
+		)
+		performInit.push(
+			"\t// " + layerName,
+			"\tself."+layerName+" = [CAShapeLayer layer];",
+			"\tself."+layerName+".path = [self new"+layerName+"Path].CGPath;",
 			"",
-			"\t[self.layer insertSublayer:self."+layerName+" atIndex:0];"
+			"\t[self.layer insertSublayer:self."+layerName+" atIndex:0];",
+			""
 		)
 		
 		layoutSubviews.push(
-			"// " + layerName,
+			"\t// " + layerName,
 			"\tCGRect "+layerName+"BoundingBox = CGPathGetBoundingBox(self."+layerName+".path);",
 	        "\t",
 			"\tCGFloat "+layerName+"BoundingBoxAspectRatio = CGRectGetWidth("+layerName+"BoundingBox)/CGRectGetHeight("+layerName+"BoundingBox);",
@@ -240,6 +248,7 @@ function processBezierLayer(layer,rootFrame,header,implementationInterface,imple
 		)
 		
 		processLayerStyle(layerName,parentLayer,header,implementationInterface,implementation,performInit,layoutSubviews)
+		performInit.push("")
 	}
 }
 
