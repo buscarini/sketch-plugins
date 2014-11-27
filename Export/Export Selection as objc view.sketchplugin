@@ -44,8 +44,7 @@ function isGroup(layer) {
   return [layer isMemberOfClass:[MSLayerGroup class]] || [layer isMemberOfClass:[MSArtboardGroup class]]
 }
 
-function processLayerStyle(layerName,layer) {
-	var result = []
+function processLayerStyle(layerName,layer,header,implementationInterface,implementation,performInit,layoutSubviews) {
 		
 	var layerStyle = [layer style]
 				
@@ -62,10 +61,10 @@ function processLayerStyle(layerName,layer) {
 		if (firstFill) {
 			var fillColor = [firstFill color]
 		
-			result = result.concat([
+			performInit.push(
 				"",
-				"\t"+layerName+".fillColor = [UIColor colorWithRed:"+[fillColor red]+" green:"+[fillColor green]+" blue:"+[fillColor blue]+" alpha:"+[fillColor alpha]+"].CGColor;"
-			])				
+				"\tself."+layerName+".fillColor = [UIColor colorWithRed:"+[fillColor red]+" green:"+[fillColor green]+" blue:"+[fillColor blue]+" alpha:"+[fillColor alpha]+"].CGColor;"
+			)
 		}
 	}
 
@@ -81,11 +80,11 @@ function processLayerStyle(layerName,layer) {
 
 		if (firstBorder) {
 			var borderColor = [firstBorder color]
-			result = result.concat([
+			performInit.push(
 				"",
-				"\t"+layerName+".strokeColor = [UIColor colorWithRed:"+[borderColor red]+" green:"+[borderColor green]+" blue:"+[borderColor blue]+" alpha:"+[borderColor alpha]+"].CGColor;",
-				"\t"+layerName+".lineWidth = "+[firstBorder thickness]+";"
-			])
+				"\tself."+layerName+".strokeColor = [UIColor colorWithRed:"+[borderColor red]+" green:"+[borderColor green]+" blue:"+[borderColor blue]+" alpha:"+[borderColor alpha]+"].CGColor;",
+				"\tself."+layerName+".lineWidth = "+[firstBorder thickness]+";"
+			)
 		}
 	}
 	
@@ -101,27 +100,25 @@ function processLayerStyle(layerName,layer) {
 			
 		if (firstShadow) {
 			var shadowColor = [firstShadow color]
-			result = result.concat([
+			performInit.push(
 				"",
-				"\t"+layerName+".shadowColor = [UIColor colorWithRed:"+[shadowColor red]+" green:"+[shadowColor green]+" blue:"+[shadowColor blue]+" alpha:"+[shadowColor alpha]+"].CGColor;",
-				"\t"+layerName+".shadowOffset = CGSizeMake("+[firstShadow offsetX]+","+-[firstShadow offsetY]+");",
-				"\t"+layerName+".shadowRadius = "+[firstShadow blurRadius]+";",
-				"\t"+layerName+".shadowOpacity = 1.0;"
-			])
+				"\tself."+layerName+".shadowColor = [UIColor colorWithRed:"+[shadowColor red]+" green:"+[shadowColor green]+" blue:"+[shadowColor blue]+" alpha:"+[shadowColor alpha]+"].CGColor;",
+				"\tself."+layerName+".shadowOffset = CGSizeMake("+[firstShadow offsetX]+","+-[firstShadow offsetY]+");",
+				"\tself."+layerName+".shadowRadius = "+[firstShadow blurRadius]+";",
+				"\tself."+layerName+".shadowOpacity = 1.0;"
+			)
 		}
 	}
 		
 	var opacity = [[[layer style] contextSettings] opacity]
 	
-	result = result.concat([
+	performInit.push(
 		"",
-		"\t"+layerName+".opacity = " + opacity + ";"
-	])
-
-	return result
+		"\tself."+layerName+".opacity = " + opacity + ";"
+	)
 }
 
-function processPoint(layerName,index,previousPoint,point,absoluteRect,rootFrame) {
+function processPoint(layerName,index,previousPoint,point,absoluteRect,rootFrame,header,implementationInterface,implementation,performInit,layoutSubviews) {
 
 	// var proportionW = [absoluteRect width]/[rootFrame width]
 // 	var proportionH = [absoluteRect height]/[rootFrame height]
@@ -133,7 +130,6 @@ function processPoint(layerName,index,previousPoint,point,absoluteRect,rootFrame
 	
 	var proportion = 1
 	
-	var result = []
 	var x = (point.point().x*[absoluteRect width]+[absoluteRect x])*proportion
 	var y = (point.point().y*[absoluteRect height]+[absoluteRect y])*proportion
 	var controlPoint1x = (previousPoint.curveFrom().x*[absoluteRect width]+[absoluteRect x])*proportion
@@ -142,38 +138,39 @@ function processPoint(layerName,index,previousPoint,point,absoluteRect,rootFrame
 	var controlPoint2y = (point.curveTo().y*[absoluteRect height]+[absoluteRect y])*proportion
 	
 	if (index==0) {
-		result.push("\t["+layerName+"Path moveToPoint:CGPointMake("+x+","+y+")];")
+		performInit.push("\t["+layerName+"Path moveToPoint:CGPointMake("+x+","+y+")];")
 	}
 	else if (point.curveFrom() && point.curveTo()) {
-		result.push("\t["+layerName+"Path addCurveToPoint:CGPointMake("+x+","+y+") controlPoint1:CGPointMake("+controlPoint1x+","+controlPoint1y+") controlPoint2:CGPointMake("+controlPoint2x+","+controlPoint2y+")];")
+		performInit.push("\t["+layerName+"Path addCurveToPoint:CGPointMake("+x+","+y+") controlPoint1:CGPointMake("+controlPoint1x+","+controlPoint1y+") controlPoint2:CGPointMake("+controlPoint2x+","+controlPoint2y+")];")
 	}
 	else {
-		result.push("\t["+layerName+"Path addLineToPoint:CGPointMake("+x+","+y+")];")
+		performInit.push("\t["+layerName+"Path addLineToPoint:CGPointMake("+x+","+y+")];")
 	}
-	
-	return result
 }
 
-function processBezierLayer(layer,rootFrame) {
+function processBezierLayer(layer,rootFrame,header,implementationInterface,implementation,performInit,layoutSubviews) {
 	log("processing bezier layer " + layer)
 	
-	var result = []
 	if(layer && layer.isKindOfClass(MSShapePathLayer)) {
 
 		var parentLayer = [layer parentGroup]
 		var absoluteRect = [parentLayer frame]
 			
-		var layerName = com.buscarini.nameForVariable(parentLayer.name())
+		var layerName = com.buscarini.nameForVariable(parentLayer.name()) + "Layer"
 
 		var path = layer.path()
 			
 		log("absoluteRect: " + [absoluteRect x] + " " + [absoluteRect y] + " " + [absoluteRect width] + " " + [absoluteRect height])
 		
-		result = result.concat([
-			"\tCAShapeLayer *" + layerName + " = [CAShapeLayer layer];",
+		implementationInterface.push(
+			"@property (nonatomic, strong) CAShapeLayer *" + layerName + ";"
+		)
+		
+		performInit.push(
+			"\tself."+layerName+" = [CAShapeLayer layer];",
 			"\tUIBezierPath *"+layerName+"Path = [UIBezierPath bezierPath];",
 			""
-		])
+		)
 
 		log("processing points")
 
@@ -192,117 +189,79 @@ function processBezierLayer(layer,rootFrame) {
 			    previousPoint = [points objectAtIndex:j-1]
 			}
 			
-			result = result.concat(processPoint(layerName,j,previousPoint,point,absoluteRect,rootFrame))			
+			processPoint(layerName,j,previousPoint,point,absoluteRect,rootFrame,header,implementationInterface,implementation,performInit,layoutSubviews)
 			
 			if (j==[points count]-1) {
 				point = [points objectAtIndex:0]
 				
 			    previousPoint = [points objectAtIndex:j]
-				result = result.concat(processPoint(layerName,j,previousPoint,point,absoluteRect,rootFrame))
+				processPoint(layerName,j,previousPoint,point,absoluteRect,rootFrame,header,implementationInterface,implementation,performInit,layoutSubviews)
 			}
 		}
 		
-		result = result.concat([
+		performInit.push(
 			"\t["+layerName+"Path closePath];",
 			"",
-			"\t"+layerName+".path = "+layerName+"Path.CGPath;",
+			"\tself."+layerName+".path = "+layerName+"Path.CGPath;",
 			"",
-			"\t[self.layer insertSublayer:"+layerName+" atIndex:0];"
-		])
+			"\t[self.layer insertSublayer:self."+layerName+" atIndex:0];"
+		)
 		
-		result = result.concat(processLayerStyle(layerName,parentLayer))
+		layoutSubviews.push(
+			"// " + layerName,
+			"\tCGRect "+layerName+"BoundingBox = CGPathGetBoundingBox(self."+layerName+".path);",
+	        "\t",
+			"\tCGFloat "+layerName+"BoundingBoxAspectRatio = CGRectGetWidth("+layerName+"BoundingBox)/CGRectGetHeight("+layerName+"BoundingBox);",
+			"\tCGFloat "+layerName+"ViewAspectRatio = CGRectGetWidth(self.frame)/CGRectGetHeight(self.frame);",
+	        "\t",
+			"\tCGFloat "+layerName+"ScaleFactor = 1.0;",
+			"\tif ("+layerName+"BoundingBoxAspectRatio > "+layerName+"ViewAspectRatio) {",
+			"\t	"+layerName+"ScaleFactor = CGRectGetWidth(self.frame)/CGRectGetWidth("+layerName+"BoundingBox);",
+			"\t} else {",
+			"\t	"+layerName+"ScaleFactor = CGRectGetHeight(self.frame)/CGRectGetHeight("+layerName+"BoundingBox);",
+			"\t}",
+	        "\t",
+	        "\t",
+			"\tCGAffineTransform "+layerName+"ScaleTransform = CGAffineTransformIdentity;",
+			"\t"+layerName+"ScaleTransform = CGAffineTransformScale("+layerName+"ScaleTransform, "+layerName+"ScaleFactor, "+layerName+"ScaleFactor);",
+			"\t"+layerName+"ScaleTransform = CGAffineTransformTranslate("+layerName+"ScaleTransform, -CGRectGetMinX("+layerName+"BoundingBox), -CGRectGetMinY("+layerName+"BoundingBox));",
+	        "\t",
+			"\tCGSize "+layerName+"ScaledSize = CGSizeApplyAffineTransform("+layerName+"BoundingBox.size, CGAffineTransformMakeScale("+layerName+"ScaleFactor, "+layerName+"ScaleFactor));",
+			"\tCGSize "+layerName+"CenterOffset = CGSizeMake((CGRectGetWidth(self.frame)-"+layerName+"ScaledSize.width)/("+layerName+"ScaleFactor*2.0),",
+			"\t								 (CGRectGetHeight(self.frame)-"+layerName+"ScaledSize.height)/("+layerName+"ScaleFactor*2.0));",
+			"\t"+layerName+"ScaleTransform = CGAffineTransformTranslate("+layerName+"ScaleTransform, "+layerName+"CenterOffset.width, "+layerName+"CenterOffset.height);",
+	        "\t",
+			"\tCGPathRef "+layerName+"Path = CGPathCreateCopyByTransformingPath(self."+layerName+".path,&"+layerName+"ScaleTransform);",
+	        "\t",
+			"\tself."+layerName+".path = "+layerName+"Path;",
+	        "\t",
+			"\tCGPathRelease("+layerName+"Path); ",
+			""
+		)
 		
-		// var layerStyle = [parentLayer style]
-//
-// 		if ([[layerStyle fills] count]>0) {
-// 			var firstFill = null
-// 			for (var fillIndex = 0; fillIndex < [[layerStyle fills] count]; fillIndex++) {
-// 				var fill = [[layerStyle fills] objectAtIndex:fillIndex]
-// 				if ([fill isEnabled]) {
-// 					firstFill = fill
-// 					break;
-// 				}
-// 			}
-//
-// 			if (firstFill) {
-// 				var fillColor = [firstFill color]
-//
-// 				result = result.concat([
-// 					"",
-// 					"\t"+layerName+".fillColor = [UIColor colorWithRed:"+[fillColor red]+" green:"+[fillColor green]+" blue:"+[fillColor blue]+" alpha:"+[fillColor alpha]+"].CGColor;"
-// 				])
-// 			}
-// 		}
-//
-// 		if ([[layerStyle borders] count]>0) {
-// 			var firstBorder = null
-// 			for (var borderIndex = 0; borderIndex < [[layerStyle borders] count]; borderIndex++) {
-// 				var border = [[layerStyle borders] objectAtIndex:borderIndex]
-// 				if ([border isEnabled]) {
-// 					firstBorder = border
-// 					break;
-// 				}
-// 			}
-//
-// 			if (firstBorder) {
-// 				var borderColor = [firstBorder color]
-// 				result = result.concat([
-// 					"",
-// 					"\t"+layerName+".strokeColor = [UIColor colorWithRed:"+[borderColor red]+" green:"+[borderColor green]+" blue:"+[borderColor blue]+" alpha:"+[borderColor alpha]+"].CGColor;",
-// 					"\t"+layerName+".lineWidth = "+[firstBorder thickness]+";"
-// 				])
-// 			}
-// 		}
-//
-// 		if ([[layerStyle shadows] count]>0) {
-// 			var firstShadow = null
-// 			for (var shadowIndex = 0; shadowIndex < [[layerStyle shadows] count]; shadowIndex++) {
-// 				var shadow = [[layerStyle shadows] objectAtIndex:shadowIndex]
-// 				if ([shadow isEnabled]) {
-// 					firstShadow = shadow
-// 					break;
-// 				}
-// 			}
-//
-// 			if (firstShadow) {
-// 				var shadowColor = [firstShadow color]
-// 				result = result.concat([
-// 					"",
-// 					"\t"+layerName+".shadowColor = [UIColor colorWithRed:"+[shadowColor red]+" green:"+[shadowColor green]+" blue:"+[shadowColor blue]+" alpha:"+[shadowColor alpha]+"].CGColor;",
-// 					"\t"+layerName+".shadowOffset = CGSizeMake("+[firstShadow offsetX]+","+-[firstShadow offsetY]+");",
-// 					"\t"+layerName+".shadowRadius = "+[firstShadow blurRadius]+";",
-// 					"\t"+layerName+".shadowOpacity = 1.0;"
-// 				])
-// 			}
-// 		}
+		processLayerStyle(layerName,parentLayer,header,implementationInterface,implementation,performInit,layoutSubviews)
 	}
-
-	return result
 }
 
-function processLayer(layer,rootFrame) {
+function processLayer(layer,rootFrame,header,implementationInterface,implementation,performInit,layoutSubviews) {
 	log("processing layer " + layer)
-	
-	var result = []
 
-	if (!layer || !layer.isVisible()) return result
+	if (!layer || !layer.isVisible()) return
 			
 	if (isGroup(layer)) {
 	    var sublayers = [layer layers];
 	    for (var sub=([sublayers count] - 1); sub >= 0; sub--) {
 	        var sublayer = [sublayers objectAtIndex:sub]
-			result = result.concat(processLayer(sublayer,rootFrame))
+			processLayer(sublayer,rootFrame,header,implementationInterface,implementation,performInit,layoutSubviews)
 		}
 	}
 	else if (layer.isKindOfClass(MSShapeGroup))  {
 		sublayer = [[layer layers] objectAtIndex:0]
-		result = result.concat(processLayer(sublayer,rootFrame))
+		processLayer(sublayer,rootFrame,header,implementationInterface,implementation,performInit,layoutSubviews)
 	}
 	else if (layer.isKindOfClass(MSShapePathLayer)) {
-		result = result.concat(processBezierLayer(layer,rootFrame))
+		processBezierLayer(layer,rootFrame,header,implementationInterface,implementation,performInit,layoutSubviews)
 	}
-
-	return result
 }
 
 if ([selection count]<=0) {
@@ -336,22 +295,23 @@ else {
 		log("Final header and imp files: " + headerFile + " " + implementationFile)
 
 		var header = [	""
-						,"#import <UIKit/UIKit.h>",
-						"",
-						"IB_DESIGNABLE",
-						"@interface " + viewName + " : UIView",
-						"",
-						"@end",
-						""
+								,"#import <UIKit/UIKit.h>",
+								"",
+								"IB_DESIGNABLE",
+								"@interface " + viewName + " : UIView",
+								""
 						]
-
-		var implementation = [ 	"#import \"" + viewName + ".h\"",
+						
+		var implementationInterface = [
+								"#import \"" + viewName + ".h\"",
 								"",
 								"#import <QuartzCore/QuartzCore.h>",
 								"",
-								"@interface " + viewName + "() {",
-								"}",
-								"@end",
+								"@interface " + viewName + "()",
+								""
+		]
+
+		var implementation = [ 	"@end",
 								"",
 								"@implementation "+viewName+"",
 								"",
@@ -372,16 +332,36 @@ else {
 								"\t}",
 								"\treturn self;",
 								"}",
-								"",
-								"- (void) performInit {"
+								""
 								]
+
+		var performInit = [
+			"- (void) performInit {"	
+		]
+		
+		var layoutSubviews = [
+			"- (void) layoutSubviews {"
+		]
 
 		for (var i=0; i<[selection count]; i++) {
 			var layer = [selection objectAtIndex:i];
-			implementation = implementation.concat(processLayer(layer,layer.frame()))			
+			processLayer(layer,layer.frame(),header,implementationInterface,implementation,performInit,layoutSubviews)
 		}
 	
-		implementation.push("}")
+		header.push("@end")
+		header.push("")
+	
+		implementationInterface.push("")
+	
+		implementation = implementationInterface.concat(implementation)
+		
+		performInit.push("}","")
+		layoutSubviews.push("}","")
+		
+		implementation = implementation.concat(performInit,layoutSubviews)
+		// implementation = implementation.concat(implementation,layoutSubviews)
+		
+		// implementation.push("}")
 		implementation.push("")
 		implementation.push("@end")
 		implementation.push("")
