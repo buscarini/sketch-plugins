@@ -54,7 +54,7 @@ function readAnimationParameters(layer) {
 	var parameters = match[2]
 	var paramsArray = parameters.split(",")
 		
-	var info = { layerName: animatedLayerName }
+	var info = { layerName: finalLayerNameFromString(animatedLayerName) }
 
 	var animationName = paramsArray.shift()
 	var duration = paramsArray.shift()
@@ -73,8 +73,17 @@ function isAnimation(layer) {
 	return true
 }
 
+function isVisible(layer) {
+	if (isAnimation(layer)) return true
+	return layer.isVisible()
+}
+
+function finalLayerNameFromString(layerName) {
+	return com.buscarini.nameForVariable(layerName) + "Layer"
+}
+
 function finalLayerName(layer) {
-	return com.buscarini.nameForVariable(layer.name()) + "Layer"
+	return finalLayerNameFromString(layer.name())
 }
 
 function processLayerStyle(layerName,layer,generationInfo,header,implementationInterface,implementation,performInit,layoutSubviews) {
@@ -302,8 +311,6 @@ function processBezierLayer(layer,rootFrame,generationInfo,header,implementation
 
 function processLayerAnimation(layer,rootFrame,generationInfo,header,implementationInterface,implementation,performInit,layoutSubviews) {
 	log("processing layer animation for " + layer)
-	
-	var layerName = layer.name()
 		
 	var animationInfo = readAnimationParameters(layer)
 		
@@ -340,7 +347,7 @@ function processLayerAnimation(layer,rootFrame,generationInfo,header,implementat
 		"\tanimation.repeatCount = "+animationInfo.repeatCount+";",
 		"\tanimation.autoreverses = YES;",
 		"\tanimation.values = @["+animationValuesString+"];",
-		"\t[self.path1Layer addAnimation:animation forKey:@\"animatePath\"];",
+		"\t[self."+animationInfo.layerName+" addAnimation:animation forKey:@\"animatePath\"];",
 		"}",
 		""
 	)
@@ -351,7 +358,8 @@ function processLayerAnimation(layer,rootFrame,generationInfo,header,implementat
 function processLayer(layer,rootFrame,onlyPaths,generationInfo,header,implementationInterface,implementation,performInit,layoutSubviews) {
 	log("processing layer " + layer)
 
-	if (!layer || !layer.isVisible()) return
+	// if (!layer || !layer.isVisible()) return
+	if (!layer || !isVisible(layer)) return
 			
 	if (isGroup(layer)) {
 		if (isAnimation(layer)) {
