@@ -172,19 +172,19 @@ function processLayerStyle(layerName,layer,generationInfo,header,implementationI
 		"\tself."+layerName+".opacity = " + opacity + ";"
 	)
 	
-	if ([layer isFlippedHorizontal]) {
-		performInit.push(
-			"",
-			"\tself."+layerName+".transform = CATransform3DRotate(self."+layerName+".transform,M_PI, 0, 1, 0);"
-		)
-	}
-	
-	if ([layer isFlippedVertical]) {
-		performInit.push(
-			"",
-			"\tself."+layerName+".transform = CATransform3DRotate(self."+layerName+".transform,M_PI, 1, 0, 0);"
-		)
-	}
+	// if ([layer isFlippedHorizontal]) {
+// 		performInit.push(
+// 			"",
+// 			"\tself."+layerName+".transform = CATransform3DRotate(self."+layerName+".transform,M_PI, 0, 1, 0);"
+// 		)
+// 	}
+//
+// 	if ([layer isFlippedVertical]) {
+// 		performInit.push(
+// 			"",
+// 			"\tself."+layerName+".transform = CATransform3DRotate(self."+layerName+".transform,M_PI, 1, 0, 0);"
+// 		)
+// 	}
 }
 
 function processPoint(layerName,index,previousPoint,point,absoluteRect,rootFrame,generationInfo,header,implementationInterface,implementation,performInit,layoutSubviews) {
@@ -197,14 +197,17 @@ function processPoint(layerName,index,previousPoint,point,absoluteRect,rootFrame
 // 	var proportion = proportionW
 // 	if (proportionW>proportionH) proportion = proportionH
 	
+	var originX = 0//[absoluteRect x]
+	var originY = 0//[absoluteRect y]
+	
 	var proportion = 1
 	
-	var x = (point.point().x*[absoluteRect width]+[absoluteRect x])*proportion
-	var y = (point.point().y*[absoluteRect height]+[absoluteRect y])*proportion
-	var controlPoint1x = (previousPoint.curveFrom().x*[absoluteRect width]+[absoluteRect x])*proportion
-	var controlPoint1y = (previousPoint.curveFrom().y*[absoluteRect height]+[absoluteRect y])*proportion
-	var controlPoint2x = (point.curveTo().x*[absoluteRect width]+[absoluteRect x])*proportion
-	var controlPoint2y = (point.curveTo().y*[absoluteRect height]+[absoluteRect y])*proportion
+	var x = (point.point().x*[absoluteRect width]+originX)*proportion
+	var y = (point.point().y*[absoluteRect height]+originY)*proportion
+	var controlPoint1x = (previousPoint.curveFrom().x*[absoluteRect width]+originX)*proportion
+	var controlPoint1y = (previousPoint.curveFrom().y*[absoluteRect height]+originY)*proportion
+	var controlPoint2x = (point.curveTo().x*[absoluteRect width]+originX)*proportion
+	var controlPoint2y = (point.curveTo().y*[absoluteRect height]+originY)*proportion
 	
 	if (index==0) {
 		implementation.push("\t["+layerName+"Path moveToPoint:CGPointMake("+x+","+y+")];")
@@ -283,7 +286,13 @@ function processBezierLayer(layer,rootFrame,generationInfo,header,implementation
 
 		var parentLayer = [layer parentGroup]
 		var layerName = finalLayerName(parentLayer)
-		
+			
+		var frame = [parentLayer frame]
+		var currentFrame = [layer frame]
+			
+		[frame setX:[frame x]+[currentFrame x]]
+		[frame setY:[frame y]+[currentFrame y]]
+					
 		generationInfo.properties.layers.push(layerName)
 		
 		implementationInterface.push(
@@ -297,7 +306,10 @@ function processBezierLayer(layer,rootFrame,generationInfo,header,implementation
 			"\tself."+layerName+" = [CAShapeLayer layer];",
 			"\tself."+layerName+".path = [self "+methodName+"].CGPath;",
 			"",
+			// "\t[self.layer addSublayer:self."+layerName+"];",
 			"\t[self.layer insertSublayer:self."+layerName+" atIndex:0];",
+			"",
+			"\tself."+layerName+".frame = CGRectMake("+[frame x]+","+[frame y]+","+[frame width]+","+[frame height]+");",
 			""
 		)
 		
