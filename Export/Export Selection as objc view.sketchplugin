@@ -240,7 +240,9 @@ function processBezierLayerPath(layer,parentLayer,rootFrame,generationInfo,class
 
 		var path = layer.path()
 				
-		var methodName = "new"+firstLetterUppercase(layerName)+firstLetterUppercase(grandpaLayerName)+"Path"
+		var methodName = "new"+firstLetterUppercase(layerName)
+		if (!isAnimation(grandpaGroup)) methodName += firstLetterUppercase(grandpaLayerName)
+		methodName += "Path"
 		if (generationInfo.methods.paths[layerName]==undefined) generationInfo.methods.paths[layerName] = []
 		generationInfo.methods.paths[layerName].push(methodName)
 
