@@ -85,26 +85,31 @@ com.buscarini.objc = {
 		}
 		return results
 	},
+	generateMethodDeclaration: function(method) {
+		var methodString = "- (" + method.returnType + ") " + method.name
+		
+		var i = 0;
+		for (var parameter in method.parameters) {
+		    if (method.hasOwnProperty(parameter)) {
+				if (i>0) {
+					methodString += " "
+					methodString += parameter.externalName
+				}
+				
+				methodString += ":(" + parameter.type  +")" + parameter.name
+				i++
+			}
+		}
+		
+		return methodString
+	},
 	generateMethods: function(classInfo,public) {
 		var results = []
 		for (var property in classInfo.methods) {
 		    if (object.hasOwnProperty(property)) {
 				if (property.public!=public) continue
 					
-				var methodString = "- (" + property.returnType + ") " + property.name
-				
-				var i = 0;
-				for (var parameter in property.parameters) {
-				    if (property.hasOwnProperty(parameter)) {
-						if (i>0) {
-							methodString += " "
-							methodString += parameter.externalName
-						}
-						
-						methodString += ":(" + parameter.type  +")" + parameter.name
-						i++
-					}
-				}
+				var methodString = this.generateMethodDeclaration(property)
 				
 				methodString += ";"
 				
@@ -117,7 +122,11 @@ com.buscarini.objc = {
 		var results = []
 		for (var property in classInfo.methods) {
 		    if (object.hasOwnProperty(property)) {
-				
+				var methodString = this.generateMethodDeclaration(property)
+				methodString += " {"
+				results.push(methodString,"")
+				results.push(property.body)
+				results.push("}","")
 			}
 		}
 		return results
