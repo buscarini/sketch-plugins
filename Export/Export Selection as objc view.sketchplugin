@@ -222,14 +222,14 @@ function processPoint(layerName,index,previousPoint,point,absoluteRect,rootFrame
 	}
 }
 
-function processBezierLayerPath(layer,rootFrame,generationInfo,classInfo) {
+function processBezierLayerPath(layer,parentLayer,rootFrame,generationInfo,classInfo) {
 	log("processing bezier layer path " + layer)
 	
 	if(layer && layer.isKindOfClass(MSShapePathLayer)) {
 
-		var parentLayer = [layer parentGroup]
-		var absoluteRect = [parentLayer frame]
-		var layerName = finalLayerName(parentLayer)
+		var parentGroup = [layer parentGroup]
+		var absoluteRect = [parentGroup frame]
+		var layerName = finalLayerName(parentGroup)
 
 		var path = layer.path()
 				
@@ -277,26 +277,23 @@ function processBezierLayerPath(layer,rootFrame,generationInfo,classInfo) {
 	}	
 }
 
-function processBezierLayer(layer,rootFrame,generationInfo,classInfo) {
+function processBezierLayer(layer,parentLayer,rootFrame,generationInfo,classInfo) {
 	log("processing bezier layer " + layer)
 	
 	if(layer && layer.isKindOfClass(MSShapePathLayer)) {
 
-		var parentLayer = [layer parentGroup]
-		var layerName = finalLayerName(parentLayer)
+		var parentGroup = [layer parentGroup]
+		var layerName = finalLayerName(parentGroup)
 			
-		var frame = [parentLayer frame]
+		var frame = [parentGroup frame]
 		var currentFrame = [layer frame]
-			
-		[frame setX:[frame x]+[currentFrame x]]
-		[frame setY:[frame y]+[currentFrame y]]
 					
 		generationInfo.properties.layers.push(layerName)
 		
 		var layerProperty = new Property("CAShapeLayer *",layerName)
 		classInfo.properties[layerName] = layerProperty
 
-		var methodName = processBezierLayerPath(layer,rootFrame,generationInfo,classInfo)
+		var methodName = processBezierLayerPath(layer,parentLayer,rootFrame,generationInfo,classInfo)
 		
 		var performInit = classInfo.methods["performInit"]
 		performInit.body.push(
@@ -305,7 +302,7 @@ function processBezierLayer(layer,rootFrame,generationInfo,classInfo) {
 			"\tself."+layerName+".path = [self "+methodName+"].CGPath;",
 			"",
 			// "\t[self.layer addSublayer:self."+layerName+"];",
-			"\t[self.layer insertSublayer:self."+layerName+" atIndex:0];",
+			"\t["+parentLayer+" insertSublayer:self."+layerName+" atIndex:0];",
 			"",
 			"\tself."+layerName+".frame = CGRectMake(0,0,"+[frame width]+","+[frame height]+");",
 			""
@@ -344,80 +341,144 @@ function processBezierLayer(layer,rootFrame,generationInfo,classInfo) {
 			""
 		)
 		
-		processLayerStyle(layerName,parentLayer,generationInfo,classInfo)
+		processLayerStyle(layerName,parentGroup,generationInfo,classInfo)
 		performInit.body.push("")
+		
+		return layerName
 	}
+	
+	return null
 }
 
-function processLayerAnimation(layer,rootFrame,generationInfo,classInfo) {
+function processContainerLayer(layer,parentLayer,rootFrame,generationInfo,classInfo) {
+	var layerName = finalLayerName(layer)
+	var frame = [layer frame]
+	
+	var layerProperty = new Property("CALayer *",layerName)
+		
+	log("clinfop: " + classInfo)
+		
+	classInfo.properties[layerName] = layerProperty
+	
+	var x = [frame x]
+	var y = [frame y]
+		
+	if (generationInfo.currentLevel==0) {
+		x = 0
+		y = 0
+	}
+	
+	var performInit = classInfo.methods["performInit"]
+	performInit.body.push(
+		"\t// " + layerName,
+		"\tself."+layerName+" = [CALayer layer];",
+		"",
+		// "\t[self.layer addSublayer:self."+layerName+"];",
+		"\t["+parentLayer+" insertSublayer:self."+layerName+" atIndex:0];",
+		"",
+		"\tself."+layerName+".frame = CGRectMake("+x+","+y+","+[frame width]+","+[frame height]+");",
+		""
+	)
+	
+	return layerName
+}
+
+function processLayerAnimation(layer,parentLayer,rootFrame,generationInfo,classInfo) {
 	log("processing layer animation for " + layer)
 		
-	var animationInfo = readAnimationParameters(layer)
+	if (isGroup(layer)) {
+		if (isAnimation(layer)) {
+			generationInfo.currentAnimationInfo = readAnimationParameters(layer)
+			
+			var animationMethod = new IBActionMethod(generationInfo.currentAnimationInfo.animationName)
+			classInfo.methods[generationInfo.currentAnimationInfo.animationName] = animationMethod
+			generationInfo.animations.push(generationInfo.currentAnimationInfo.animationName)
+		}
 		
-	var generatedPathsCount = generationInfo.methods.paths.length
-		
-	// Process sublayers
-    var sublayers = [layer layers];
-    for (var sub=([sublayers count] - 1); sub >= 0; sub--) {
-        var sublayer = [sublayers objectAtIndex:sub]
-		processLayer(sublayer,rootFrame,true,generationInfo,classInfo)
-	}
+		// Process sublayers
+	    var sublayers = [layer layers];
+	    for (var sub=([sublayers count] - 1); sub >= 0; sub--) {
+	        var sublayer = [sublayers objectAtIndex:sub]
+			generationInfo.currentLevel = generationInfo.currentLevel+1		
+			processLayer(sublayer,parentLayer,rootFrame,true,generationInfo,classInfo)
+			generationInfo.currentLevel = generationInfo.currentLevel-1
+		}
 
-	var currentGeneratedPathsCount = generationInfo.methods.paths.length
-	var animationPathsCount = currentGeneratedPathsCount-generatedPathsCount
-	if (animationPathsCount<=0) return
-	
-	var animationValues = []
-	for (var animationIndex = generatedPathsCount; animationIndex < currentGeneratedPathsCount; animationIndex++) {
-		var methodName = generationInfo.methods.paths[animationIndex]
-		animationValues.push("(id)[self "+ methodName +"].CGPath")
+		if (isAnimation(layer)) {		
+			generationInfo.currentAnimationInfo = null	
+		}
 	}
-	
-	var animationValuesString = animationValues.join(",")
+	else {
+		var generatedPathsCount = generationInfo.methods.paths.length
+			
+		processBezierLayerPath(layer,parentLayer,rootFrame,generationInfo,classInfo)
 		
-	var animationMethod = new IBActionMethod(animationInfo.animationName)
-	animationMethod.body.push(
-		"\tCAKeyframeAnimation *animation = [CAKeyframeAnimation animationWithKeyPath:@\"path\"];",
-		"\tanimation.duration = "+animationInfo.duration+";",
-		"\tanimation.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut];",
-		"\tanimation.repeatCount = "+animationInfo.repeatCount+";",
-		"\tanimation.autoreverses = YES;",
-		"\tanimation.values = @["+animationValuesString+"];",
-		"\t[self."+animationInfo.layerName+" addAnimation:animation forKey:@\"animatePath\"];"
-	)
-	classInfo.methods[animationInfo.animationName] = animationMethod
+		var currentGeneratedPathsCount = generationInfo.methods.paths.length
+		var animationPathsCount = currentGeneratedPathsCount-generatedPathsCount
+		if (animationPathsCount<=0) return
 	
-	generationInfo.animations.push(animationInfo.animationName)
+		var animationValues = []
+		for (var animationIndex = generatedPathsCount; animationIndex < currentGeneratedPathsCount; animationIndex++) {
+			var methodName = generationInfo.methods.paths[animationIndex]
+			animationValues.push("(id)[self "+ methodName +"].CGPath")
+		}
+	
+		var animationValuesString = animationValues.join(",")
+			
+		var layerName = finalLayerName([layer parentGroup])
+		
+		var animationMethod = classInfo.methods[generationInfo.currentAnimationInfo.animationName]
+		animationMethod.body.push(
+			"\tCAKeyframeAnimation *"+layerName+"Animation = [CAKeyframeAnimation animationWithKeyPath:@\"path\"];",
+			"\t"+layerName+"Animation.duration = "+generationInfo.currentAnimationInfo.duration+";",
+			"\t"+layerName+"Animation.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut];",
+			"\t"+layerName+"Animation.repeatCount = "+generationInfo.currentAnimationInfo.repeatCount+";",
+			"\t"+layerName+"Animation.autoreverses = YES;",
+			"\t"+layerName+"Animation.values = @["+animationValuesString+"];",
+			"\t[self."+generationInfo.currentAnimationInfo.layerName+" addAnimation:"+layerName+"Animation forKey:@\"animatePath\"];",
+			""
+		)
+	}
 }
 
-function processLayer(layer,rootFrame,onlyPaths,generationInfo,classInfo) {
+function processLayer(layer,parentLayer,rootFrame,processingAnimation,generationInfo,classInfo) {
 	log("processing layer " + layer)
 
 	// if (!layer || !layer.isVisible()) return
-	if (!layer || !isVisible(layer)) return
+	if (!layer || !isVisible(layer)) return null
 			
 	if (isGroup(layer)) {
 		if (isAnimation(layer)) {
-			processLayerAnimation(layer,rootFrame,generationInfo,classInfo)
+			processLayerAnimation(layer,parentLayer,rootFrame,generationInfo,classInfo)
 		}
 		else {
+			var layerName = parentLayer
+			if (!processingAnimation) {
+				layerName = processContainerLayer(layer,parentLayer,rootFrame,generationInfo,classInfo)				
+			}
+			
 		    var sublayers = [layer layers];
 		    for (var sub=([sublayers count] - 1); sub >= 0; sub--) {
 		        var sublayer = [sublayers objectAtIndex:sub]
-				processLayer(sublayer,rootFrame,onlyPaths,generationInfo,classInfo)
-			}			
+				generationInfo.currentLevel = generationInfo.currentLevel+1
+				processLayer(sublayer,"self."+layerName,rootFrame,processingAnimation,generationInfo,classInfo)
+				generationInfo.currentLevel = generationInfo.currentLevel-1
+			}
 		}
 	}
 	else if (layer.isKindOfClass(MSShapeGroup))  {
 		sublayer = [[layer layers] objectAtIndex:0]
-		processLayer(sublayer,rootFrame,onlyPaths,generationInfo,classInfo)
+		generationInfo.currentLevel = generationInfo.currentLevel+1
+		processLayer(sublayer,parentLayer,rootFrame,processingAnimation,generationInfo,classInfo)
+		generationInfo.currentLevel = generationInfo.currentLevel-1		
 	}
 	else if (layer.isKindOfClass(MSShapePathLayer)) {
-		if (onlyPaths) {
-			processBezierLayerPath(layer,rootFrame,generationInfo,classInfo)
+		if (processingAnimation) {
+			processLayerAnimation(layer,parentLayer,rootFrame,generationInfo,classInfo)
+			// processBezierLayerPath(layer,parentLayer,rootFrame,generationInfo,classInfo)
 		}
 		else {
-			processBezierLayer(layer,rootFrame,generationInfo,classInfo)		
+			processBezierLayer(layer,parentLayer,rootFrame,generationInfo,classInfo)		
 		}
 	}
 }
@@ -451,13 +512,15 @@ function main() {
 		
 		var path = [[panel URLs] lastObject];
 
-		var generationInfo = { "methods" : {
-				 							"paths" : []
+		var generationInfo = { methods : {
+				 							paths : []
 											},
-								"properties" : {
-									"layers" : []
+								properties : {
+									layers : []
 								},
-								"animations" : []
+								animations : [],
+								currentLevel : 0,
+								currentAnimationInfo : null
 							}
 
 		var headerFile = [path URLByAppendingPathComponent:viewName + ".h"]
@@ -513,7 +576,7 @@ function main() {
 
 		for (var i=0; i<[selection count]; i++) {
 			var layer = [selection objectAtIndex:i];
-			processLayer(layer,layer.frame(),false,generationInfo,classInfo)
+			processLayer(layer,"self.layer",layer.frame(),false,generationInfo,classInfo)
 		}
 
 		var header = com.buscarini.objc.generateHeader(classInfo)
@@ -542,4 +605,3 @@ function main() {
 }
 
 main()
-
