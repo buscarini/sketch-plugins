@@ -118,7 +118,7 @@ function processLayerStyle(layerName,layer,generationInfo,classInfo) {
 		if (firstFill) {
 			var fillColor = [firstFill color]
 		
-			performInit.push(
+			performInit.body.push(
 				"",
 				"\tself."+layerName+".fillColor = [UIColor colorWithRed:"+[fillColor red]+" green:"+[fillColor green]+" blue:"+[fillColor blue]+" alpha:"+[fillColor alpha]+"].CGColor;"
 			)
@@ -137,7 +137,7 @@ function processLayerStyle(layerName,layer,generationInfo,classInfo) {
 
 		if (firstBorder) {
 			var borderColor = [firstBorder color]
-			performInit.push(
+			performInit.body.push(
 				"",
 				"\tself."+layerName+".strokeColor = [UIColor colorWithRed:"+[borderColor red]+" green:"+[borderColor green]+" blue:"+[borderColor blue]+" alpha:"+[borderColor alpha]+"].CGColor;",
 				"\tself."+layerName+".lineWidth = "+[firstBorder thickness]+";"
@@ -157,7 +157,7 @@ function processLayerStyle(layerName,layer,generationInfo,classInfo) {
 			
 		if (firstShadow) {
 			var shadowColor = [firstShadow color]
-			performInit.push(
+			performInit.body.push(
 				"",
 				"\tself."+layerName+".shadowColor = [UIColor colorWithRed:"+[shadowColor red]+" green:"+[shadowColor green]+" blue:"+[shadowColor blue]+" alpha:"+[shadowColor alpha]+"].CGColor;",
 				"\tself."+layerName+".shadowOffset = CGSizeMake("+[firstShadow offsetX]+","+[firstShadow offsetY]+");",
@@ -169,20 +169,20 @@ function processLayerStyle(layerName,layer,generationInfo,classInfo) {
 	
 	var opacity = [[[layer style] contextSettings] opacity]
 	
-	performInit.push(
+	performInit.body.push(
 		"",
 		"\tself."+layerName+".opacity = " + opacity + ";"
 	)
 	
 	// if ([layer isFlippedHorizontal]) {
-	// 		performInit.push(
+	// 		performInit.body.push(
 	// 			"",
 	// 			"\tself."+layerName+".transform = CATransform3DRotate(self."+layerName+".transform,M_PI, 0, 1, 0);"
 	// 		)
 	// 	}
 	//
 	// 	if ([layer isFlippedVertical]) {
-	// 		performInit.push(
+	// 		performInit.body.push(
 	// 			"",
 	// 			"\tself."+layerName+".transform = CATransform3DRotate(self."+layerName+".transform,M_PI, 1, 0, 0);"
 	// 		)
@@ -294,11 +294,12 @@ function processBezierLayer(layer,rootFrame,generationInfo,classInfo) {
 		generationInfo.properties.layers.push(layerName)
 		
 		var layerProperty = new Property("CAShapeLayer *",layerName)
+		classInfo.properties[layerName] = layerProperty
 
 		var methodName = processBezierLayerPath(layer,rootFrame,generationInfo,classInfo)
 		
 		var performInit = classInfo.methods["performInit"]
-		performInit.push(
+		performInit.body.push(
 			"\t// " + layerName,
 			"\tself."+layerName+" = [CAShapeLayer layer];",
 			"\tself."+layerName+".path = [self "+methodName+"].CGPath;",
@@ -311,7 +312,7 @@ function processBezierLayer(layer,rootFrame,generationInfo,classInfo) {
 		)
 		
 		var layoutSubviews = classInfo.methods["layoutSubviews"]
-		layoutSubviews.push(
+		layoutSubviews.body.push(
 			"\t// " + layerName,
 			"\tCGRect "+layerName+"BoundingBox = CGRectMake(0,0,"+[rootFrame width]+","+[rootFrame height]+");",//"CGPathGetBoundingBox(self."+layerName+".path);",
 	        "\t",
@@ -344,7 +345,7 @@ function processBezierLayer(layer,rootFrame,generationInfo,classInfo) {
 		)
 		
 		processLayerStyle(layerName,parentLayer,generationInfo,classInfo)
-		performInit.push("")
+		performInit.body.push("")
 	}
 }
 
@@ -480,7 +481,7 @@ function main() {
 		
 		var initFrameMethod = new Method("id","initWithFrame")
 		initFrameMethod.public = false
-		initFrameMethod.parameters['frame'] = new Parameter(null,"CGRect","frame")
+		initFrameMethod.parameters.push(new Parameter(null,"CGRect","frame"))
 		initFrameMethod.body.push(
 								"\tself = [super initWithFrame:frame];",
 								"\tif (self) {",
@@ -492,7 +493,7 @@ function main() {
 								
 		var initCoderMethod = new Method("id","initWithCoder")
 		initCoderMethod.public = false
-		initCoderMethod.parameters['coder'] = new Parameter(null,"NSCoder *","aDecoder")
+		initCoderMethod.parameters.push(new Parameter(null,"NSCoder *","aDecoder"))
 		initCoderMethod.body.push(
 								"\tself = [super initWithCoder:aDecoder];",
 								"\tif (self) {",
@@ -515,15 +516,12 @@ function main() {
 			processLayer(layer,layer.frame(),false,generationInfo,classInfo)
 		}
 
-		var headerLines = com.buscarini.objc.generateHeader(classInfo)
-		var implementationLines = com.buscarini.objc.generateImplementation(classInfo)
+		var header = com.buscarini.objc.generateHeader(classInfo)
+		var implementation = com.buscarini.objc.generateImplementation(classInfo)
 	
 		log("Writing files")
 
 		var fileManager = [NSFileManager defaultManager];
-
-		var header = headerLines.join('\n')
-		var implementation = implementationLines.join('\n')
 	
 		var headerString = [NSString stringWithString:header]
 

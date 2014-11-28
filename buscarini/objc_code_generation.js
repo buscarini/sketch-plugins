@@ -39,11 +39,13 @@ var Method = augment.defclass({
 	constructor: function(returnType,name) {
 		this.returnType = returnType
 		this.name = name
+		this.parameters = []
+		this.body = []
 	},
 	name: null,
 	returnType: "void",
-	parameters: [],
-	body: [],
+	parameters: null,
+	body: null,
 	public: false
 })
 
@@ -71,25 +73,31 @@ var Parameter = augment.defclass({
 })
 
 com.buscarini.objc = {
+	generateImport: function(anImport) {
+		if (anImport.relative) {
+			return "#import \""+ anImport.name +"\""
+		}
+		else {
+			return "#import <"+ anImport.name +">"
+		}
+	},
 	generateImports: function(classInfo,public) {
 		var results = []
-		for (var property in classInfo.imports) {
-		    if (object.hasOwnProperty(property)) {
+		for (var key in classInfo.imports) {
+		    if (classInfo.imports.hasOwnProperty(key)) {
+				var property = classInfo.imports[key]
 				if (property.public!=public) continue
-				if (property.relative) {
-					results.push("#import \""+ property.name +"\"")
-				}
-				else {
-					results.push("#import <"+ property.name +">")
-				}
+
+				results.push(this.generateImport(property))					
 		    }
 		}
 		return results
 	},
 	generateProperties: function(classInfo,public) {
 		var results = []
-		for (var property in classInfo.properties) {
-		    if (object.hasOwnProperty(property)) {
+		for (var key in classInfo.properties) {
+		    if (classInfo.properties.hasOwnProperty(key)) {
+				var property = classInfo.properties[key]
 				if (property.public!=public) continue
 					
 				var atomicString = "nonatomic"
@@ -101,6 +109,11 @@ com.buscarini.objc = {
 	},
 	generateMethodDeclaration: function(method) {
 		var methodString = "- (" + method.returnType + ") " + method.name
+		
+		if (method.parameters==undefined) {
+			log("Error, method parameters undefined: " + method)
+			return ""
+		}
 		
 		for (var i = 0; i < method.parameters.length; i++) {
 			var parameter = method.parameters[i]
@@ -116,8 +129,9 @@ com.buscarini.objc = {
 	},
 	generateMethods: function(classInfo,public) {
 		var results = []
-		for (var property in classInfo.methods) {
-		    if (object.hasOwnProperty(property)) {
+		for (var key in classInfo.methods) {
+		    if (classInfo.methods.hasOwnProperty(key)) {
+				var property = classInfo.methods[key]
 				if (property.public!=public) continue
 					
 				var methodString = this.generateMethodDeclaration(property)
@@ -131,12 +145,13 @@ com.buscarini.objc = {
 	},
 	generateMethodsBody: function(classInfo) {
 		var results = []
-		for (var property in classInfo.methods) {
-		    if (object.hasOwnProperty(property)) {
-				var methodString = this.generateMethodDeclaration(property)
+		for (var key in classInfo.methods) {
+		    if (classInfo.methods.hasOwnProperty(key)) {
+				var method = classInfo.methods[key]
+				var methodString = this.generateMethodDeclaration(method)
 				methodString += " {"
 				results.push(methodString,"")
-				results.push.apply(results,property.body)
+				results.push.apply(results,method.body)
 				results.push("}","")
 			}
 		}
@@ -148,6 +163,13 @@ com.buscarini.objc = {
 		// Imports
 		resultLines.push.apply(resultLines,this.generateImports(classInfo,public))
 		resultLines.push("")
+			
+		if (!public) {
+			var classImport = new Import(classInfo.name + ".h")
+			classImport.relative = true
+			resultLines.push(this.generateImport(classImport))
+			resultLines.push("")
+		}
 	
 		if (public && classInfo.designable) {
 			resultLines.push("IB_DESIGNABLE")
@@ -173,7 +195,9 @@ com.buscarini.objc = {
 		resultLines.push.apply(resultLines,this.generateProperties(classInfo,public))
 		resultLines.push("")
 		
-		resultLines.push.apply(resultLines,this.generateHeaderMethods(classInfo,public))
+		if (public) {
+			resultLines.push.apply(resultLines,this.generateMethods(classInfo,public))
+		}
 		
 		resultLines.push("","@end","")
 		
@@ -190,10 +214,8 @@ com.buscarini.objc = {
 		
 		resultLines.push.apply(resultLines,this.generateMethodsBody(classInfo))
 		
-		resultLines.push("")
+		resultLines.push("","@end","")
 			
 		return resultLines.join("\n")
 	}
 }	
-
-
