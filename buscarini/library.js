@@ -1,7 +1,11 @@
 
 var com = {};
 
-com.buscarini = {
+com.buscarini = {}
+
+#import 'objc_code_generation.js'
+
+com.buscarini.utils = {
 	goldenRatio : 1.61803398875,
 	e : 2.7182818284590452353602874,
 	increaseColorBrightness: function(color,inc) {
@@ -197,3 +201,6 @@ com.buscarini = {
 		[layer setIsLocked:locked];
 	}
 }
+
+
+
