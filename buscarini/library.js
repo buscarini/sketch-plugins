@@ -1,9 +1,10 @@
 
-var com = {};
+#import '../buscarini/augment.js'
 
+var com = {}
 com.buscarini = {}
 
-#import 'objc_code_generation.js'
+#import '../buscarini/objc_code_generation.js'
 
 com.buscarini.utils = {
 	goldenRatio : 1.61803398875,

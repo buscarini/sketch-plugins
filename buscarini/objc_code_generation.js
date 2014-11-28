@@ -1,4 +1,3 @@
-#import "augment.js"
 
 var ClassInfo = augment.defclass({
 	constructor: function(name) {
@@ -21,7 +20,7 @@ var Import = augment.defclass({
 	name: null,
 	relative: false,
 	public: true
-}
+})
 
 var Property = augment.defclass({
 	constructor: function(type,name){
@@ -34,27 +33,42 @@ var Property = augment.defclass({
 	storage: "strong",
 	inspectable: false,
 	public: false
-}
+})
 
 var Method = augment.defclass({
-	constructor: function(returnType,name){
+	constructor: function(returnType,name) {
+		this.returnType = returnType
 		this.name = name
 	},
 	name: null,
 	returnType: "void",
-	parameters: {},
-	body: null,
+	parameters: [],
+	body: [],
 	public: false
-}
+})
+
+var IBActionMethod = augment.defclass({
+	constructor: function(name) {
+		this.name = name
+		this.parameters.push(new Parameter(null,"id","sender"))
+	},
+	name: null,
+	returnType: "IBAction",
+	parameters: [],
+	body: [],
+	public: true
+})
 
 var Parameter = augment.defclass({
-	constructor: function(type,name){
+	constructor: function(externalName,type,name){
+		this.externalName = externalName
+		this.type = type
 		this.name = name
 	},
 	name: null,
 	type: null,
 	externalName: null
-}
+})
 
 com.buscarini.objc = {
 	generateImports: function(classInfo,public) {
@@ -88,17 +102,14 @@ com.buscarini.objc = {
 	generateMethodDeclaration: function(method) {
 		var methodString = "- (" + method.returnType + ") " + method.name
 		
-		var i = 0;
-		for (var parameter in method.parameters) {
-		    if (method.hasOwnProperty(parameter)) {
-				if (i>0) {
-					methodString += " "
-					methodString += parameter.externalName
-				}
-				
-				methodString += ":(" + parameter.type  +")" + parameter.name
-				i++
+		for (var i = 0; i < method.parameters.length; i++) {
+			var parameter = method.parameters[i]
+			if (i>0) {
+				methodString += " "
+				methodString += parameter.externalName
 			}
+			
+			methodString += ":(" + parameter.type  +")" + parameter.name
 		}
 		
 		return methodString
@@ -125,7 +136,7 @@ com.buscarini.objc = {
 				var methodString = this.generateMethodDeclaration(property)
 				methodString += " {"
 				results.push(methodString,"")
-				results.push(property.body)
+				results.push.apply(results,property.body)
 				results.push("}","")
 			}
 		}
