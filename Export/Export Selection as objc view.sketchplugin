@@ -393,51 +393,91 @@ function processLayerAnimation(layer,parentLayer,rootFrame,generationInfo,classI
 			var animationMethod = new IBActionMethod(generationInfo.currentAnimationInfo.animationName)
 			classInfo.methods[generationInfo.currentAnimationInfo.animationName] = animationMethod
 			generationInfo.animations.push(generationInfo.currentAnimationInfo.animationName)
-		}
-		
-		// Process sublayers
-	    var sublayers = [layer layers];
-	    for (var sub=([sublayers count] - 1); sub >= 0; sub--) {
-	        var sublayer = [sublayers objectAtIndex:sub]
-			generationInfo.currentLevel = generationInfo.currentLevel+1		
-			processLayer(sublayer,parentLayer,rootFrame,true,generationInfo,classInfo)
-			generationInfo.currentLevel = generationInfo.currentLevel-1
-		}
 
-		if (isAnimation(layer)) {		
+			// Process sublayers
+		    var sublayers = [layer layers];
+		    for (var sub=([sublayers count] - 1); sub >= 0; sub--) {
+		        var sublayer = [sublayers objectAtIndex:sub]
+				generationInfo.currentLevel = generationInfo.currentLevel+1		
+				processLayer(sublayer,parentLayer,rootFrame,true,generationInfo,classInfo)
+				generationInfo.currentLevel = generationInfo.currentLevel-1
+			}
+
 			generationInfo.currentAnimationInfo = null	
+		}
+		else {
+			
+			var generatedPathsCount = generationInfo.methods.paths.length
+			
+			// Process sublayers
+		    var sublayers = [layer layers];
+		    for (var sub=([sublayers count] - 1); sub >= 0; sub--) {
+		        var sublayer = [sublayers objectAtIndex:sub]
+				generationInfo.currentLevel = generationInfo.currentLevel+1		
+				processLayer(sublayer,parentLayer,rootFrame,true,generationInfo,classInfo)
+				generationInfo.currentLevel = generationInfo.currentLevel-1
+			}
+			
+			var currentGeneratedPathsCount = generationInfo.methods.paths.length
+			var animationPathsCount = currentGeneratedPathsCount-generatedPathsCount
+			if (animationPathsCount<=0) return
+	
+			var animationValues = []
+			for (var animationIndex = generatedPathsCount; animationIndex < currentGeneratedPathsCount; animationIndex++) {
+				var methodName = generationInfo.methods.paths[animationIndex]
+				animationValues.push("(id)[self "+ methodName +"].CGPath")
+			}
+	
+			var animationValuesString = animationValues.join(",")
+			
+			var layerName = finalLayerName(layer)
+		
+			var repeatCount = generationInfo.currentAnimationInfo.repeatCount
+			if (repeatCount=="always" || repeatCount=="infinite") repeatCount = "HUGE_VALF"
+		
+			var animationMethod = classInfo.methods[generationInfo.currentAnimationInfo.animationName]
+			animationMethod.body.push(
+				"\tCAKeyframeAnimation *"+layerName+"Animation = [CAKeyframeAnimation animationWithKeyPath:@\"path\"];",
+				"\t"+layerName+"Animation.duration = "+generationInfo.currentAnimationInfo.duration+";",
+				"\t"+layerName+"Animation.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut];",
+				"\t"+layerName+"Animation.repeatCount = "+generationInfo.currentAnimationInfo.repeatCount+";",
+				"\t"+layerName+"Animation.autoreverses = YES;",
+				"\t"+layerName+"Animation.values = @["+animationValuesString+"];",
+				"\t[self."+generationInfo.currentAnimationInfo.layerName+" addAnimation:"+layerName+"Animation forKey:@\"animatePath\"];",
+				""
+			)
 		}
 	}
 	else {
-		var generatedPathsCount = generationInfo.methods.paths.length
+		// var generatedPathsCount = generationInfo.methods.paths.length
 			
 		processBezierLayerPath(layer,parentLayer,rootFrame,generationInfo,classInfo)
 		
-		var currentGeneratedPathsCount = generationInfo.methods.paths.length
-		var animationPathsCount = currentGeneratedPathsCount-generatedPathsCount
-		if (animationPathsCount<=0) return
-	
-		var animationValues = []
-		for (var animationIndex = generatedPathsCount; animationIndex < currentGeneratedPathsCount; animationIndex++) {
-			var methodName = generationInfo.methods.paths[animationIndex]
-			animationValues.push("(id)[self "+ methodName +"].CGPath")
-		}
-	
-		var animationValuesString = animationValues.join(",")
-			
-		var layerName = finalLayerName([layer parentGroup])
-		
-		var animationMethod = classInfo.methods[generationInfo.currentAnimationInfo.animationName]
-		animationMethod.body.push(
-			"\tCAKeyframeAnimation *"+layerName+"Animation = [CAKeyframeAnimation animationWithKeyPath:@\"path\"];",
-			"\t"+layerName+"Animation.duration = "+generationInfo.currentAnimationInfo.duration+";",
-			"\t"+layerName+"Animation.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut];",
-			"\t"+layerName+"Animation.repeatCount = "+generationInfo.currentAnimationInfo.repeatCount+";",
-			"\t"+layerName+"Animation.autoreverses = YES;",
-			"\t"+layerName+"Animation.values = @["+animationValuesString+"];",
-			"\t[self."+generationInfo.currentAnimationInfo.layerName+" addAnimation:"+layerName+"Animation forKey:@\"animatePath\"];",
-			""
-		)
+		// var currentGeneratedPathsCount = generationInfo.methods.paths.length
+// 		var animationPathsCount = currentGeneratedPathsCount-generatedPathsCount
+// 		if (animationPathsCount<=0) return
+//
+// 		var animationValues = []
+// 		for (var animationIndex = generatedPathsCount; animationIndex < currentGeneratedPathsCount; animationIndex++) {
+// 			var methodName = generationInfo.methods.paths[animationIndex]
+// 			animationValues.push("(id)[self "+ methodName +"].CGPath")
+// 		}
+//
+// 		var animationValuesString = animationValues.join(",")
+//
+// 		var layerName = finalLayerName([layer parentGroup])
+//
+// 		var animationMethod = classInfo.methods[generationInfo.currentAnimationInfo.animationName]
+// 		animationMethod.body.push(
+// 			"\tCAKeyframeAnimation *"+layerName+"Animation = [CAKeyframeAnimation animationWithKeyPath:@\"path\"];",
+// 			"\t"+layerName+"Animation.duration = "+generationInfo.currentAnimationInfo.duration+";",
+// 			"\t"+layerName+"Animation.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut];",
+// 			"\t"+layerName+"Animation.repeatCount = "+generationInfo.currentAnimationInfo.repeatCount+";",
+// 			"\t"+layerName+"Animation.autoreverses = YES;",
+// 			"\t"+layerName+"Animation.values = @["+animationValuesString+"];",
+// 			"\t[self."+generationInfo.currentAnimationInfo.layerName+" addAnimation:"+layerName+"Animation forKey:@\"animatePath\"];",
+// 			""
+// 		)
 	}
 }
 
@@ -448,14 +488,14 @@ function processLayer(layer,parentLayer,rootFrame,processingAnimation,generation
 	if (!layer || !isVisible(layer)) return null
 			
 	if (isGroup(layer)) {
-		if (isAnimation(layer)) {
+		if (isAnimation(layer) || processingAnimation) {
 			processLayerAnimation(layer,parentLayer,rootFrame,generationInfo,classInfo)
 		}
 		else {
 			var layerName = parentLayer
-			if (!processingAnimation) {
+			// if (!processingAnimation) {
 				layerName = processContainerLayer(layer,parentLayer,rootFrame,generationInfo,classInfo)				
-			}
+			// }
 			
 		    var sublayers = [layer layers];
 		    for (var sub=([sublayers count] - 1); sub >= 0; sub--) {
