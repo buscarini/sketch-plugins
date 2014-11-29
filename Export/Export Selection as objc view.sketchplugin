@@ -73,6 +73,15 @@ function isAnimation(layer) {
 	return true
 }
 
+function addAnimationValue(animationInfo,layerName,key,value) {
+	if (!animationInfo) return
+
+	log(key)
+
+	if (animationInfo[key][layerName]==undefined) animationInfo[key][layerName] = []
+	animationInfo[key][layerName].push(value)
+}
+
 function isVisible(layer) {
 	if (isAnimation(layer)) return true
 	return layer.isVisible()
@@ -117,10 +126,7 @@ function processLayerStyle(layerName,layer,generationInfo,classInfo) {
 
 			var colorString = "[UIColor colorWithRed:"+[fillColor red]+" green:"+[fillColor green]+" blue:"+[fillColor blue]+" alpha:"+[fillColor alpha]+"].CGColor"
 				
-			if (generationInfo.currentAnimationInfo) {
-				if (generationInfo.currentAnimationInfo.fillColors[layerName]==undefined) generationInfo.currentAnimationInfo.fillColors[layerName] = []
-				generationInfo.currentAnimationInfo.fillColors[layerName].push("(id)" + colorString)
-			}
+			addAnimationValue(generationInfo.currentAnimationInfo,layerName,"fillColor","(id)" + colorString)
 
 			performInit.body.push(
 				"",
@@ -141,9 +147,15 @@ function processLayerStyle(layerName,layer,generationInfo,classInfo) {
 
 		if (firstBorder) {
 			var borderColor = [firstBorder color]
+				
+			var colorString = "[UIColor colorWithRed:"+[borderColor red]+" green:"+[borderColor green]+" blue:"+[borderColor blue]+" alpha:"+[borderColor alpha]+"].CGColor"
+			
+			addAnimationValue(generationInfo.currentAnimationInfo,layerName,"strokeColor","(id)" + colorString)
+			addAnimationValue(generationInfo.currentAnimationInfo,layerName,"lineWidth","@(" + [firstBorder thickness] + ")")
+
 			performInit.body.push(
 				"",
-				"\tself."+layerName+".strokeColor = [UIColor colorWithRed:"+[borderColor red]+" green:"+[borderColor green]+" blue:"+[borderColor blue]+" alpha:"+[borderColor alpha]+"].CGColor;",
+				"\tself."+layerName+".strokeColor = "+colorString+";",
 				"\tself."+layerName+".lineWidth = "+[firstBorder thickness]+";"
 			)
 		}
@@ -161,9 +173,17 @@ function processLayerStyle(layerName,layer,generationInfo,classInfo) {
 			
 		if (firstShadow) {
 			var shadowColor = [firstShadow color]
+			
+				var colorString = "[UIColor colorWithRed:"+[shadowColor red]+" green:"+[shadowColor green]+" blue:"+[shadowColor blue]+" alpha:"+[shadowColor alpha]+"].CGColor"
+			
+			addAnimationValue(generationInfo.currentAnimationInfo,layerName,"shadowColor","(id)" + colorString)
+			addAnimationValue(generationInfo.currentAnimationInfo,layerName,"shadowOffset","[NSValue valueWithCGSize:CGSizeMake("+[firstShadow offsetX]+","+[firstShadow offsetY]+")]")
+			addAnimationValue(generationInfo.currentAnimationInfo,layerName,"shadowRadius","@(" + [firstShadow blurRadius] + ")")
+			// addAnimationValue(generationInfo.currentAnimationInfo,layerName,"shadowOpacity","(id)" + colorString)
+			
 			performInit.body.push(
 				"",
-				"\tself."+layerName+".shadowColor = [UIColor colorWithRed:"+[shadowColor red]+" green:"+[shadowColor green]+" blue:"+[shadowColor blue]+" alpha:"+[shadowColor alpha]+"].CGColor;",
+				"\tself."+layerName+".shadowColor = "+colorString+";",
 				"\tself."+layerName+".shadowOffset = CGSizeMake("+[firstShadow offsetX]+","+[firstShadow offsetY]+");",
 				"\tself."+layerName+".shadowRadius = "+[firstShadow blurRadius]+";",
 				"\tself."+layerName+".shadowOpacity = 1.0;"
@@ -172,6 +192,8 @@ function processLayerStyle(layerName,layer,generationInfo,classInfo) {
 	}
 	
 	var opacity = [[[layer style] contextSettings] opacity]
+	
+	addAnimationValue(generationInfo.currentAnimationInfo,layerName,"opacity","@(" + opacity + ")")
 	
 	performInit.body.push(
 		"",
@@ -252,8 +274,8 @@ function processBezierLayerPath(layer,parentLayer,rootFrame,generationInfo,class
 		methodName += "Path"
 			
 		if (generationInfo.currentAnimationInfo) {
-			if (generationInfo.currentAnimationInfo.paths[layerName]==undefined) generationInfo.currentAnimationInfo.paths[layerName] = []
-			generationInfo.currentAnimationInfo.paths[layerName].push(methodName)			
+			if (generationInfo.currentAnimationInfo.path[layerName]==undefined) generationInfo.currentAnimationInfo.path[layerName] = []
+			generationInfo.currentAnimationInfo.path[layerName].push("(id)[self "+methodName +"].CGPath")
 		}
 				
 		var pathMethod = new Method("UIBezierPath *",methodName)
@@ -419,14 +441,45 @@ function processContainerLayer(layer,parentLayer,rootFrame,generationInfo,classI
 	return layerName
 }
 
+function processAnimationKey(keyPath,animationInfo,classInfo) {
+	// Generate animations
+	var animationDic = animationInfo[keyPath]
+	for (var key in animationDic) {
+	    if (animationDic.hasOwnProperty(key)) {
+			var animationValues = animationDic[key]
+
+			var animationValuesString = animationValues.join(",")
+			
+			var layerName = key
+
+			var repeatCount = animationInfo.repeatCount
+			if (repeatCount=="always" || repeatCount=="infinite") repeatCount = "HUGE_VALF"
+
+			var animationName = layerName+firstLetterUppercase(keyPath)+"Animation"
+
+			var animationMethod = classInfo.methods[animationInfo.animationName]
+			animationMethod.body.push(
+				"\tCAKeyframeAnimation *"+animationName+" = [CAKeyframeAnimation animationWithKeyPath:@\""+keyPath+"\"];",
+				"\t"+animationName+".duration = "+animationInfo.duration+";",
+				"\t"+animationName+".timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut];",
+				"\t"+animationName+".repeatCount = "+animationInfo.repeatCount+";",
+				"\t"+animationName+".autoreverses = YES;",
+				"\t"+animationName+".values = @["+animationValuesString+"];",
+				"\t[self."+layerName+" addAnimation:"+animationName+" forKey:@\""+keyPath+"\"];",
+				""
+			)
+		}
+	}
+}
+
 function processPathAnimation(generationInfo,classInfo) {
 	// Generate animations
-	for (var pathKey in generationInfo.currentAnimationInfo.paths) {
-	    if (generationInfo.currentAnimationInfo.paths.hasOwnProperty(pathKey)) {
+	for (var pathKey in generationInfo.currentAnimationInfo.path) {
+	    if (generationInfo.currentAnimationInfo.path.hasOwnProperty(pathKey)) {
 			log("processing animation for path: " + pathKey)
 			
 			var animationValues = []
-			var methodNames = generationInfo.currentAnimationInfo.paths[pathKey]
+			var methodNames = generationInfo.currentAnimationInfo.path[pathKey]
 			for (var i = 0; i < methodNames.length; i++) {
 				var methodName = methodNames[i]
 				log("processing method: " + methodName)
@@ -459,8 +512,8 @@ function processPathAnimation(generationInfo,classInfo) {
 
 function processFillColorAnimation(generationInfo,classInfo) {
 	// Generate animations
-	for (var colorKey in generationInfo.currentAnimationInfo.fillColors) {
-	    if (generationInfo.currentAnimationInfo.paths.hasOwnProperty(colorKey)) {
+	for (var colorKey in generationInfo.currentAnimationInfo.fillColor) {
+	    if (generationInfo.currentAnimationInfo.path.hasOwnProperty(colorKey)) {
 			log("processing animation for fill color: " + colorKey)
 			
 			var animationValues = []
@@ -510,12 +563,15 @@ function processLayerAnimation(layer,parentLayer,rootFrame,generationInfo,classI
 			var performInit = classInfo.methods["performInit"]
 			performInit.body.push("\t[self "+animationMethod.name+":self];")
 
-			generationInfo.currentAnimationInfo.paths = {}
-			generationInfo.currentAnimationInfo.opacities = {}
-			generationInfo.currentAnimationInfo.fillColors = {}
-			generationInfo.currentAnimationInfo.borderColors = {}
-			generationInfo.currentAnimationInfo.borderWidths = {}
-			generationInfo.currentAnimationInfo.shadowColors = {}
+			generationInfo.currentAnimationInfo.path = {}
+			generationInfo.currentAnimationInfo.opacity = {}
+			generationInfo.currentAnimationInfo.fillColor = {}
+			generationInfo.currentAnimationInfo.strokeColor = {}
+			generationInfo.currentAnimationInfo.lineWidth = {}
+			generationInfo.currentAnimationInfo.shadowColor = {}
+			generationInfo.currentAnimationInfo.shadowOffset = {}
+			generationInfo.currentAnimationInfo.shadowRadius = {}
+			generationInfo.currentAnimationInfo.shadowOpacity = {}
 
 			// Process sublayers
 		    var sublayers = [layer layers];
@@ -526,43 +582,15 @@ function processLayerAnimation(layer,parentLayer,rootFrame,generationInfo,classI
 				generationInfo.currentLevel = generationInfo.currentLevel-1
 			}
 			
-			
 			// Generate animations
-			processPathAnimation(generationInfo,classInfo)
-			processFillColorAnimation(generationInfo,classInfo)
-			
-			// for (var pathKey in generationInfo.currentAnimationInfo.paths) {
-// 			    if (generationInfo.currentAnimationInfo.paths.hasOwnProperty(pathKey)) {
-// 					log("processing animation for path: " + pathKey)
-//
-// 					var animationValues = []
-// 					var methodNames = generationInfo.currentAnimationInfo.paths[pathKey]
-// 					for (var i = 0; i < methodNames.length; i++) {
-// 						var methodName = methodNames[i]
-// 						log("processing method: " + methodName)
-// 						animationValues.push("(id)[self "+ methodName +"].CGPath")
-// 					}
-//
-// 					var animationValuesString = animationValues.join(",")
-//
-// 					var layerName = pathKey
-//
-// 					var repeatCount = generationInfo.currentAnimationInfo.repeatCount
-// 					if (repeatCount=="always" || repeatCount=="infinite") repeatCount = "HUGE_VALF"
-//
-// 					var animationMethod = classInfo.methods[generationInfo.currentAnimationInfo.animationName]
-// 					animationMethod.body.push(
-// 						"\tCAKeyframeAnimation *"+layerName+"Animation = [CAKeyframeAnimation animationWithKeyPath:@\"path\"];",
-// 						"\t"+layerName+"Animation.duration = "+generationInfo.currentAnimationInfo.duration+";",
-// 						"\t"+layerName+"Animation.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut];",
-// 						"\t"+layerName+"Animation.repeatCount = "+generationInfo.currentAnimationInfo.repeatCount+";",
-// 						"\t"+layerName+"Animation.autoreverses = YES;",
-// 						"\t"+layerName+"Animation.values = @["+animationValuesString+"];",
-// 						"\t[self."+layerName+" addAnimation:"+layerName+"Animation forKey:@\"animatePath\"];",
-// 						""
-// 					)
-// 				}
-// 			}
+			processAnimationKey("opacity",generationInfo.currentAnimationInfo,classInfo)
+			processAnimationKey("path",generationInfo.currentAnimationInfo,classInfo)
+			processAnimationKey("fillColor",generationInfo.currentAnimationInfo,classInfo)
+			processAnimationKey("strokeColor",generationInfo.currentAnimationInfo,classInfo)
+			processAnimationKey("lineWidth",generationInfo.currentAnimationInfo,classInfo)
+			processAnimationKey("shadowColor",generationInfo.currentAnimationInfo,classInfo)
+			processAnimationKey("shadowOffset",generationInfo.currentAnimationInfo,classInfo)
+			processAnimationKey("shadowRadius",generationInfo.currentAnimationInfo,classInfo)
 			
 			generationInfo.currentAnimationInfo = null
 		}
