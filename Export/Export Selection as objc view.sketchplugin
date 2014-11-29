@@ -85,11 +85,12 @@ function allValuesEqual(array) {
 
 function addAnimationValue(animationInfo,layerName,key,value) {
 	if (!animationInfo) return
+	if (!animationInfo.keyPaths[key]) animationInfo.keyPaths[key] = {}
 
 	log(key)
 
-	if (animationInfo[key][layerName]==undefined) animationInfo[key][layerName] = []
-	animationInfo[key][layerName].push(value)
+	if (animationInfo.keyPaths[key][layerName]==undefined) animationInfo.keyPaths[key][layerName] = []
+	animationInfo.keyPaths[key][layerName].push(value)
 }
 
 function isVisible(layer) {
@@ -281,8 +282,7 @@ function processBezierLayerPath(layer,parentLayer,rootFrame,generationInfo,class
 		var methodName = "new"+firstLetterUppercase(layerName)
 		if (!isAnimation(grandpaGroup)) methodName += firstLetterUppercase(grandpaLayerName)
 		methodName += "Path"
-			
-		
+
 		addAnimationValue(generationInfo.currentAnimationInfo,layerName,"path","(id)[self "+methodName +"].CGPath")
 		addAnimationValue(generationInfo.currentAnimationInfo,layerName,"shadowPath","(id)[self "+methodName +"].CGPath")
 						
@@ -452,7 +452,7 @@ function processContainerLayer(layer,parentLayer,rootFrame,generationInfo,classI
 
 function processAnimationKey(keyPath,animationInfo,classInfo) {
 	// Generate animations
-	var animationDic = animationInfo[keyPath]
+	var animationDic = animationInfo.keyPaths[keyPath]
 	for (var key in animationDic) {
 	    if (animationDic.hasOwnProperty(key)) {
 			var animationValues = animationDic[key]
@@ -498,15 +498,7 @@ function processLayerAnimation(layer,parentLayer,rootFrame,generationInfo,classI
 			var performInit = classInfo.methods["performInit"]
 			performInit.body.push("\t[self "+animationMethod.name+":self];")
 
-			generationInfo.currentAnimationInfo.path = {}
-			generationInfo.currentAnimationInfo.shadowPath = {}
-			generationInfo.currentAnimationInfo.opacity = {}
-			generationInfo.currentAnimationInfo.fillColor = {}
-			generationInfo.currentAnimationInfo.strokeColor = {}
-			generationInfo.currentAnimationInfo.lineWidth = {}
-			generationInfo.currentAnimationInfo.shadowColor = {}
-			generationInfo.currentAnimationInfo.shadowOffset = {}
-			generationInfo.currentAnimationInfo.shadowRadius = {}
+			generationInfo.currentAnimationInfo.keyPaths = {}
 
 			// Process sublayers
 		    var sublayers = [layer layers];
