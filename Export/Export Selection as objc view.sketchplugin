@@ -344,25 +344,58 @@ function processBezierLayer(layer,parentLayer,rootFrame,generationInfo,classInfo
 		else {
 			generationInfo.properties.layers.push(layerName)
 		
-			var layerProperty = new Property("CAShapeLayer *",layerName)
-			classInfo.properties[layerName] = layerProperty
+			var layerProperty = null
+			var layerMaskProperty = null
+			
+			var layerMaskName = layerName + "Mask"
+				
+			var isGradient = isGradientLayer(parentGroup)
+				
+			if (isGradient) {
+				layerProperty = new Property("CAGradientLayer *",layerName)
+				classInfo.properties[layerName] = layerProperty
+				
+				layerMaskProperty = new Property("CAShapeLayer *",layerMaskName)
+				classInfo.properties[layerMaskName] = layerMaskProperty
+			}
+			else {
+				layerProperty = new Property("CAShapeLayer *",layerName)
+				classInfo.properties[layerName] = layerProperty				
+			}
 
 			var methodName = processBezierLayerPath(layer,parentLayer,rootFrame,generationInfo,classInfo)
 		
 			var performInit = classInfo.methods["performInit"]
 			performInit.body.push(
 				"\t// " + layerName,
-				"\tself."+layerName+" = [CAShapeLayer layer];",
-				"\tself."+layerName+".path = [self "+methodName+"].CGPath;",
+				"\tself."+layerName+" = [CAShapeLayer layer];"
+			)
+		
+			if (isGradient) {
+				performInit.body.push(
+					"\tself."+layerName+" = [CAGradientLayer layer];",
+					"\tself."+layerMaskName+" = [CAGradientLayer layer];",
+					"\tself."+layerMaskName+".path = [self "+methodName+"].CGPath;",
+					"\tself."+layerName+".mask = self."+layerMaskName+";"
+				)
+			}
+			else {
+				performInit.body.push(
+					"\tself."+layerName+" = [CAShapeLayer layer];",
+					"\tself."+layerName+".path = [self "+methodName+"].CGPath;"
+				)
+			}
+		
+			performInit.body.push(
 				"\tself."+layerName+".shadowPath = self."+layerName+".path;",
 				"",
-				// "\t[self.layer addSublayer:self."+layerName+"];",
 				"\t["+parentLayer+" insertSublayer:self."+layerName+" atIndex:0];",
 				"",
 				"\tself."+layerName+".frame = CGRectMake(0,0,"+[frame width]+","+[frame height]+");",
 				""
 			)
-		
+			
+			
 			var layoutMethodName = "layoutLayer" + firstLetterUppercase(layerName)
 			var layoutLayerView = new Method("void",layoutMethodName)
 			classInfo.methods[layoutMethodName] = layoutLayerView
