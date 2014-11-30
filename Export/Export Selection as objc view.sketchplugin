@@ -2,6 +2,8 @@
 
 #import '../buscarini/library.js'
 
+// Utility functions
+
 function dump(obj){
   log("######################################")
   log("## Dumping object " + obj )
@@ -39,7 +41,6 @@ function dump(obj){
   log(obj.treeAsDictionary())
 }
 
-
 function isGroup(layer) {
   return [layer isMemberOfClass:[MSLayerGroup class]] || [layer isMemberOfClass:[MSArtboardGroup class]]
 }
@@ -71,6 +72,30 @@ function isAnimation(layer) {
 	var info = readAnimationParameters(layer)
 	if (info==null) return false
 	return true
+}
+
+function firstStylePart(parts) {
+	if ([parts count]>0) {
+		var firstPart = null
+		for (var partIndex = 0; partIndex < [parts count]; partIndex++) {
+			var part = [parts objectAtIndex:partIndex]
+			if ([part isEnabled]) {
+				firstPart = part
+				break;
+			}
+		}
+		return firstPart
+	}
+	return null
+}
+
+function isGradientLayer(layer) {
+	var layerStyle = [layer style]
+
+	var firstFill = firstStylePart([layerStyle fills])
+	var type =  [firstFill fillType]
+	
+	return (type==1)
 }
 
 function allValuesEqual(array) {
@@ -116,89 +141,64 @@ function firstLetterUppercase(string) {
 	return string.charAt(0).toUpperCase() + string.slice(1);
 }
 
+// Processing functions
+
 function processLayerStyle(layerName,layer,generationInfo,classInfo) {
 		
 	var layerStyle = [layer style]
 
 	var performInit = classInfo.methods["performInit"]
 
-	if ([[layerStyle fills] count]>0) {
-		var firstFill = null
-		for (var fillIndex = 0; fillIndex < [[layerStyle fills] count]; fillIndex++) {
-			var fill = [[layerStyle fills] objectAtIndex:fillIndex]
-			if ([fill isEnabled]) {
-				firstFill = fill
-				break;
-			}
-		}
+
+	var firstFill = firstStylePart([layerStyle fills])
 		
-		if (firstFill) {
-			var fillColor = [firstFill color]
+	if (firstFill) {
+		var fillColor = [firstFill color]
 
-			var colorString = "[UIColor colorWithRed:"+[fillColor red]+" green:"+[fillColor green]+" blue:"+[fillColor blue]+" alpha:"+[fillColor alpha]+"].CGColor"
-				
-			addAnimationValue(generationInfo.currentAnimationInfo,layerName,"fillColor","(id)" + colorString)
+		var colorString = "[UIColor colorWithRed:"+[fillColor red]+" green:"+[fillColor green]+" blue:"+[fillColor blue]+" alpha:"+[fillColor alpha]+"].CGColor"
+			
+		addAnimationValue(generationInfo.currentAnimationInfo,layerName,"fillColor","(id)" + colorString)
 
-			performInit.body.push(
-				"",
-				"\tself."+layerName+".fillColor = " + colorString + ";"
-			)
-		}
+		performInit.body.push(
+			"",
+			"\tself."+layerName+".fillColor = " + colorString + ";"
+		)
 	}
 
-	if ([[layerStyle borders] count]>0) {
-		var firstBorder = null
-		for (var borderIndex = 0; borderIndex < [[layerStyle borders] count]; borderIndex++) {
-			var border = [[layerStyle borders] objectAtIndex:borderIndex]
-			if ([border isEnabled]) {
-				firstBorder = border
-				break;
-			}
-		}
+	var firstBorder = firstStylePart([layerStyle borders])
 
-		if (firstBorder) {
-			var borderColor = [firstBorder color]
-				
-			var colorString = "[UIColor colorWithRed:"+[borderColor red]+" green:"+[borderColor green]+" blue:"+[borderColor blue]+" alpha:"+[borderColor alpha]+"].CGColor"
+	if (firstBorder) {
+		var borderColor = [firstBorder color]
 			
-			addAnimationValue(generationInfo.currentAnimationInfo,layerName,"strokeColor","(id)" + colorString)
-			addAnimationValue(generationInfo.currentAnimationInfo,layerName,"lineWidth","@(" + [firstBorder thickness] + ")")
+		var colorString = "[UIColor colorWithRed:"+[borderColor red]+" green:"+[borderColor green]+" blue:"+[borderColor blue]+" alpha:"+[borderColor alpha]+"].CGColor"
+		
+		addAnimationValue(generationInfo.currentAnimationInfo,layerName,"strokeColor","(id)" + colorString)
+		addAnimationValue(generationInfo.currentAnimationInfo,layerName,"lineWidth","@(" + [firstBorder thickness] + ")")
 
-			performInit.body.push(
-				"",
-				"\tself."+layerName+".strokeColor = "+colorString+";",
-				"\tself."+layerName+".lineWidth = "+[firstBorder thickness]+";"
-			)
-		}
+		performInit.body.push(
+			"",
+			"\tself."+layerName+".strokeColor = "+colorString+";",
+			"\tself."+layerName+".lineWidth = "+[firstBorder thickness]+";"
+		)
 	}
 	
-	if ([[layerStyle shadows] count]>0) {
-		var firstShadow = null
-		for (var shadowIndex = 0; shadowIndex < [[layerStyle shadows] count]; shadowIndex++) {
-			var shadow = [[layerStyle shadows] objectAtIndex:shadowIndex]
-			if ([shadow isEnabled]) {
-				firstShadow = shadow
-				break;
-			}
-		}
-			
-		if (firstShadow) {
-			var shadowColor = [firstShadow color]
-			
-				var colorString = "[UIColor colorWithRed:"+[shadowColor red]+" green:"+[shadowColor green]+" blue:"+[shadowColor blue]+" alpha:"+[shadowColor alpha]+"].CGColor"
-			
-			addAnimationValue(generationInfo.currentAnimationInfo,layerName,"shadowColor","(id)" + colorString)
-			addAnimationValue(generationInfo.currentAnimationInfo,layerName,"shadowOffset","[NSValue valueWithCGSize:CGSizeMake("+[firstShadow offsetX]+","+[firstShadow offsetY]+")]")
-			addAnimationValue(generationInfo.currentAnimationInfo,layerName,"shadowRadius","@(" + [firstShadow blurRadius] + ")")
-			
-			performInit.body.push(
-				"",
-				"\tself."+layerName+".shadowColor = "+colorString+";",
-				"\tself."+layerName+".shadowOffset = CGSizeMake("+[firstShadow offsetX]+","+[firstShadow offsetY]+");",
-				"\tself."+layerName+".shadowRadius = "+[firstShadow blurRadius]+";",
-				"\tself."+layerName+".shadowOpacity = 1.0;"
-			)
-		}
+	var firstShadow = firstStylePart([layerStyle shadows])
+	if (firstShadow) {
+		var shadowColor = [firstShadow color]
+		
+			var colorString = "[UIColor colorWithRed:"+[shadowColor red]+" green:"+[shadowColor green]+" blue:"+[shadowColor blue]+" alpha:"+[shadowColor alpha]+"].CGColor"
+		
+		addAnimationValue(generationInfo.currentAnimationInfo,layerName,"shadowColor","(id)" + colorString)
+		addAnimationValue(generationInfo.currentAnimationInfo,layerName,"shadowOffset","[NSValue valueWithCGSize:CGSizeMake("+[firstShadow offsetX]+","+[firstShadow offsetY]+")]")
+		addAnimationValue(generationInfo.currentAnimationInfo,layerName,"shadowRadius","@(" + [firstShadow blurRadius] + ")")
+		
+		performInit.body.push(
+			"",
+			"\tself."+layerName+".shadowColor = "+colorString+";",
+			"\tself."+layerName+".shadowOffset = CGSizeMake("+[firstShadow offsetX]+","+[firstShadow offsetY]+");",
+			"\tself."+layerName+".shadowRadius = "+[firstShadow blurRadius]+";",
+			"\tself."+layerName+".shadowOpacity = 1.0;"
+		)
 	}
 	
 	var opacity = [[[layer style] contextSettings] opacity]
