@@ -89,13 +89,16 @@ function firstStylePart(parts) {
 	return null
 }
 
+function isGradientFill(fill) {
+	return ([fill fillType]==1)
+}
+
 function isGradientLayer(layer) {
 	var layerStyle = [layer style]
 
 	var firstFill = firstStylePart([layerStyle fills])
-	var type =  [firstFill fillType]
-	
-	return (type==1)
+		
+	return isGradientFill(firstFill)
 }
 
 function allValuesEqual(array) {
@@ -149,20 +152,51 @@ function processLayerStyle(layerName,layer,generationInfo,classInfo) {
 
 	var performInit = classInfo.methods["performInit"]
 
-
 	var firstFill = firstStylePart([layerStyle fills])
 		
 	if (firstFill) {
-		var fillColor = [firstFill color]
+		if (!isGradientFill(firstFill)) {
+			var fillColor = [firstFill color]
 
-		var colorString = "[UIColor colorWithRed:"+[fillColor red]+" green:"+[fillColor green]+" blue:"+[fillColor blue]+" alpha:"+[fillColor alpha]+"].CGColor"
+			var colorString = "[UIColor colorWithRed:"+[fillColor red]+" green:"+[fillColor green]+" blue:"+[fillColor blue]+" alpha:"+[fillColor alpha]+"].CGColor"
 			
-		addAnimationValue(generationInfo.currentAnimationInfo,layerName,"fillColor","(id)" + colorString)
+			addAnimationValue(generationInfo.currentAnimationInfo,layerName,"fillColor","(id)" + colorString)
 
-		performInit.body.push(
-			"",
-			"\tself."+layerName+".fillColor = " + colorString + ";"
-		)
+			performInit.body.push(
+				"",
+				"\tself."+layerName+".fillColor = " + colorString + ";"
+			)			
+		}
+		else {
+			var gradient = [firstFill gradient]
+			var from = [gradient from]
+			var to = [gradient to]
+			performInit.body.push(
+				"",
+				"\tself."+layerName+".startPoint = CGPointMake(" + from.x + ","+ from.y +");",
+				"\tself."+layerName+".endPoint = CGPointMake(" + to.x + ","+ to.y +");"
+			)
+			
+			var gradientStops = [gradient stops]
+			var gradientPositions = []
+			var gradientColors = []
+			for (var i = 0; i < [gradientStops count]; i++) {
+				var gradientStop = [gradientStops objectAtIndex:i]
+				log("gradientStop" + i)
+				gradientPositions.push("@("+[gradientStop position]+")")
+				var color = [gradientStop color]
+				gradientColors.push("(id)[UIColor colorWithRed:"+[color red]+" green:"+[color green]+" blue:"+[color blue]+" alpha:"+[color alpha]+"].CGColor")
+			}
+			
+			performInit.body.push(
+				"\tself."+layerName+".locations = @["+ gradientPositions.join(",") +"];",
+				"\tself."+layerName+".colors = @["+ gradientColors.join(",") +"];"
+			)
+		}
+	}
+	
+	if (isGradientFill(firstFill)) {
+		layerName = layerName + "Mask"
 	}
 
 	var firstBorder = firstStylePart([layerStyle borders])
@@ -235,8 +269,8 @@ function processPoint(layerName,index,previousPoint,point,absoluteRect,rootFrame
 // 	var proportion = proportionW
 // 	if (proportionW>proportionH) proportion = proportionH
 	
-	var originX = [absoluteRect x]
-	var originY = [absoluteRect y]
+	var originX = 0//[absoluteRect x]
+	var originY = 0//[absoluteRect y]
 	
 	var proportion = 1
 	
@@ -367,31 +401,32 @@ function processBezierLayer(layer,parentLayer,rootFrame,generationInfo,classInfo
 		
 			var performInit = classInfo.methods["performInit"]
 			performInit.body.push(
-				"\t// " + layerName,
-				"\tself."+layerName+" = [CAShapeLayer layer];"
+				"\t// " + layerName
 			)
 		
 			if (isGradient) {
 				performInit.body.push(
 					"\tself."+layerName+" = [CAGradientLayer layer];",
-					"\tself."+layerMaskName+" = [CAGradientLayer layer];",
+					"\tself."+layerMaskName+" = [CAShapeLayer layer];",
 					"\tself."+layerMaskName+".path = [self "+methodName+"].CGPath;",
+					"\tself."+layerMaskName+".shadowPath = self."+layerMaskName+".path;",
+					"\t[self."+layerName+" addSublayer:self."+layerMaskName+"];",
 					"\tself."+layerName+".mask = self."+layerMaskName+";"
 				)
 			}
 			else {
 				performInit.body.push(
 					"\tself."+layerName+" = [CAShapeLayer layer];",
-					"\tself."+layerName+".path = [self "+methodName+"].CGPath;"
+					"\tself."+layerName+".path = [self "+methodName+"].CGPath;",
+					"\tself."+layerName+".shadowPath = self."+layerName+".path;"
 				)
 			}
 		
 			performInit.body.push(
-				"\tself."+layerName+".shadowPath = self."+layerName+".path;",
 				"",
 				"\t["+parentLayer+" insertSublayer:self."+layerName+" atIndex:0];",
 				"",
-				"\tself."+layerName+".frame = CGRectMake(0,0,"+[frame width]+","+[frame height]+");",
+				"\tself."+layerName+".frame = CGRectMake("+[frame x]+","+[frame y]+","+[frame width]+","+[frame height]+");",
 				""
 			)
 			
@@ -407,7 +442,7 @@ function processBezierLayer(layer,parentLayer,rootFrame,generationInfo,classInfo
 							"")
 		
 			layoutLayerView.body.push(
-				"\tCGRect "+layerName+"BoundingBox = CGRectMake(0,0,"+[rootFrame width]+","+[rootFrame height]+");",//"CGPathGetBoundingBox(self."+layerName+".path);",
+				"\tCGRect "+layerName+"BoundingBox = CGRectMake(0,0,"+[rootFrame width]+","+[rootFrame height]+");",
 		        "\t",
 				"\tCGFloat "+layerName+"BoundingBoxAspectRatio = CGRectGetWidth("+layerName+"BoundingBox)/CGRectGetHeight("+layerName+"BoundingBox);",
 				"\tCGFloat "+layerName+"ViewAspectRatio = CGRectGetWidth(self.frame)/CGRectGetHeight(self.frame);",
@@ -429,9 +464,31 @@ function processBezierLayer(layer,parentLayer,rootFrame,generationInfo,classInfo
 				"\t								 (CGRectGetHeight(self.frame)-"+layerName+"ScaledSize.height)/("+layerName+"ScaleFactor*2.0));",
 				"\t"+layerName+"ScaleTransform = CGAffineTransformTranslate("+layerName+"ScaleTransform, "+layerName+"CenterOffset.width, "+layerName+"CenterOffset.height);",
 		        "\t",
-				"\tCGPathRef "+layerName+"Path = CGPathCreateCopyByTransformingPath(self."+layerName+".path,&"+layerName+"ScaleTransform);",
-		        "\t",
-				"\tself."+layerName+".path = "+layerName+"Path;",
+				"\tself."+layerName+".frame = CGRectMake(self."+layerName+".frame.origin.x*"+layerName+"ScaleFactor,self."+layerName+".frame.origin.y*"+layerName+"ScaleFactor,self."+layerName+".frame.size.width,self."+layerName+".frame.size.height);"
+			)
+			
+			if (isGradient) {
+				layoutLayerView.body.push(
+					"\tCGPathRef "+layerName+"Path = CGPathCreateCopyByTransformingPath(self."+layerMaskName+".path,&"+layerName+"ScaleTransform);",
+					"\t",
+					"\tself."+layerMaskName+".path = "+layerName+"Path;",
+					"\tself."+layerMaskName+".lineWidth = self."+layerMaskName+".lineWidth*"+layerName+"ScaleFactor;",
+					"\tself."+layerMaskName+".shadowOffset = CGSizeMake(self."+layerMaskName+".shadowOffset.width*"+layerName+"ScaleFactor,self."+layerMaskName+".shadowOffset.height*"+layerName+"ScaleFactor);",
+				"\tself."+layerMaskName+".shadowRadius = self."+layerMaskName+".shadowRadius*"+layerName+"ScaleFactor;"
+				)
+			}
+			else {
+				layoutLayerView.body.push(
+					"\tCGPathRef "+layerName+"Path = CGPathCreateCopyByTransformingPath(self."+layerName+".path,&"+layerName+"ScaleTransform);",
+			        "\t",
+					"\tself."+layerName+".path = "+layerName+"Path;",
+					"\tself."+layerName+".lineWidth = self."+layerName+".lineWidth*"+layerName+"ScaleFactor;",
+					"\tself."+layerName+".shadowOffset = CGSizeMake(self."+layerName+".shadowOffset.width*"+layerName+"ScaleFactor,self."+layerName+".shadowOffset.height*"+layerName+"ScaleFactor);",
+					"\tself."+layerName+".shadowRadius = self."+layerName+".shadowRadius*"+layerName+"ScaleFactor;"
+				)				
+			}
+			
+			layoutLayerView.body.push(
 		        "\t",
 				"\tCGPathRelease("+layerName+"Path); ",
 				""
