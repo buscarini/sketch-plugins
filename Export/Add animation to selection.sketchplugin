@@ -1,0 +1,42 @@
+// Add animation to selection
+
+#import '../buscarini/library.js'
+
+function main() {
+
+	if ([selection count]<=0) {
+		[doc showMessage:"Nothing selected"];
+	}
+	else {
+		for (var i = 0; i < [selection count]; i++) {
+			var layer = [selection objectAtIndex:i]
+			if (!com.buscarini.utils.isAnimation(layer)) {
+				var parentGroup = [layer parentGroup]
+				var animationGroup = [parentGroup addLayerOfType:"group"]
+				[animationGroup setName:[layer name]+"_animation(animation"+com.buscarini.utils.uniqueScriptId()+",duration,repeatCount)"]
+				
+				var step1 = [animationGroup addLayerOfType:"group"]
+				[step1 setName:"step1"]
+				var step1Layer = [layer duplicate]
+				[parentGroup removeLayer:step1Layer]
+				[[step1 layers] addObject:step1Layer]
+
+				var step2 = [animationGroup addLayerOfType:"group"]
+				[step2 setName:"step2"]
+				var step2Layer = [layer duplicate]
+				[parentGroup removeLayer:step2Layer]
+				[[step2 layers] addObject:step2Layer]
+
+				var step2 = [animationGroup addLayerOfType:"group"]
+				[step2 setName:"step3"]
+				var step2Layer = [layer duplicate]
+				[parentGroup removeLayer:step2Layer]
+				[[step2 layers] addObject:step2Layer]
+			}
+		}
+		
+		[doc showMessage:"Done"];
+	}
+}
+
+main()

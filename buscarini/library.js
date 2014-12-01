@@ -1,221 +1,333 @@
 
-var ClassInfo = augment.defclass({
-	constructor: function(name) {
-		this.name = name
-	},
-	name : null,
-	parentClass: "NSObject",
-	protocols: [],
-	privateProtocols : [],
-	imports: {},
-	properties : {},
-	methods : {},
-	designable: false
-})
+#import '../buscarini/augment.js'
 
-var Import = augment.defclass({
-	constructor: function(name){
-		this.name = name
-	},
-	name: null,
-	relative: false,
-	public: true
-})
+var com = {}
+com.buscarini = {}
 
-var Property = augment.defclass({
-	constructor: function(type,name){
-		this.type = type
-		this.name = name
-	},
-	name: null,
-	type: null,
-	atomic: false,
-	storage: "strong",
-	inspectable: false,
-	public: false
-})
+#import '../buscarini/objc_code_generation.js'
 
-var Method = augment.defclass({
-	constructor: function(returnType,name) {
-		this.returnType = returnType
-		this.name = name
-		this.parameters = []
-		this.body = []
-	},
-	name: null,
-	returnType: "void",
-	parameters: null,
-	body: null,
-	public: false
-})
+com.buscarini.utils = {
+	uniqueId: 1,
+	goldenRatio : 1.61803398875,
+	e : 2.7182818284590452353602874,
+	increaseColorBrightness: function(color,inc) {
+		var red = [color red]
+		red += inc
+		if (red>1) red=1
+		[color setRed:red]
 
-var IBActionMethod = augment.defclass({
-	constructor: function(name) {
-		this.name = name
-		this.parameters.push(new Parameter(null,"id","sender"))
-	},
-	name: null,
-	returnType: "IBAction",
-	parameters: [],
-	body: [],
-	public: true
-})
+		var green = [color green]
+		green += inc
+		if (green>1) green=1
+		[color setGreen:green]
 
-var Parameter = augment.defclass({
-	constructor: function(externalName,type,name){
-		this.externalName = externalName
-		this.type = type
-		this.name = name
+		var blue = [color blue]
+		blue += inc
+		if (blue>1) blue=1
+		[color setBlue:blue]
 	},
-	name: null,
-	type: null,
-	externalName: null
-})
-
-com.buscarini.objc = {
-	generateImport: function(anImport) {
-		if (anImport.relative) {
-			return "#import \""+ anImport.name +"\""
+	uniqueScriptId: function() {
+		this.uniqueId++
+		return this.uniqueId
+	},
+	normalizeName: function(name) {
+		name = name.replace(/\s+/g, '')
+		return name
+	},
+	nameForVariable: function(name) {
+		name = this.normalizeName(name)
+		return name.charAt(0).toLowerCase() + name.slice(1);
+	},
+	nameForClass: function(name) {
+		name = this.normalizeName(name)
+		return name.charAt(0).toUpperCase() + name.slice(1);
+	},
+	appendSuffixOnce: function(name,suffix) {
+		if (name.substr(-suffix.length,suffix.length).toLowerCase()!=suffix.toLowerCase()) {
+			name += suffix
 		}
-		else {
-			return "#import <"+ anImport.name +">"
-		}
+		return name	
 	},
-	generateImports: function(classInfo,public) {
-		var results = []
-		for (var key in classInfo.imports) {
-		    if (classInfo.imports.hasOwnProperty(key)) {
-				var property = classInfo.imports[key]
-				if (property.public!=public) continue
-
-				results.push(this.generateImport(property))					
-		    }
-		}
-		return results
-	},
-	generateProperties: function(classInfo,public) {
-		var results = []
-		for (var key in classInfo.properties) {
-		    if (classInfo.properties.hasOwnProperty(key)) {
-				var property = classInfo.properties[key]
-				if (property.public!=public) continue
-					
-				var atomicString = "nonatomic"
-				if (property.atomic) atomicString = "atomic"
-				results.push("@property (" + atomicString + "," + property.storage + ") " + property.type + " " + property.name +";")
-			}
-		}
-		return results
-	},
-	generateMethodDeclaration: function(method) {
-		var methodString = "- (" + method.returnType + ") " + method.name
+	removeAllFills: function(layer) {
+		layerStyle = [layer style]
+		fills = [layerStyle fills]
 		
-		if (method.parameters==undefined) {
-			log("Error, method parameters undefined: " + method)
-			return ""
+		for (var f=0;f<[fills count];f++) {
+			fill = fills[f]
+			[layer removeStylePart:fill]
 		}
-		
-		for (var i = 0; i < method.parameters.length; i++) {
-			var parameter = method.parameters[i]
-			if (i>0) {
-				methodString += " "
-				methodString += parameter.externalName
-			}
-			
-			methodString += ":(" + parameter.type  +")" + parameter.name
-		}
-		
-		return methodString
 	},
-	generateMethods: function(classInfo,public) {
-		var results = []
-		for (var key in classInfo.methods) {
-		    if (classInfo.methods.hasOwnProperty(key)) {
-				var property = classInfo.methods[key]
-				if (property.public!=public) continue
-					
-				var methodString = this.generateMethodDeclaration(property)
+	scaleLayerWithPct: function(layer,percent,round) {
+		frame = [layer frame]
+		width = [frame width]
+		height = [frame height]
 				
-				methodString += ";"
+		width = width*percent
+		height = height*percent
 				
-				results.push(methodString)
+		com.buscarini.scaleLayerToSize(layer,width,height,round)
+	},
+	findLayerWithName: function(name) {
+	
+		var page = [doc currentPage]
+		return com.buscarini.findLayerWithNameInGroup(name,page)
+	},
+	findLayerWithNameInGroup: function(name,group) {
+		var allLayers = [group layers]
+		for (var i=0;i<[allLayers count];i++) {
+			var layer = allLayers[i]
+			if ([layer name]==name) return layer;
+			if (layer.layers!=undefined) {
+				/// It's a group
+				var found = com.buscarini.findLayerWithNameInGroup(name,layer)
+				if (found) return found
 			}
 		}
-		return results
-	},
-	generateMethodsBody: function(classInfo) {
-		var results = []
-		for (var key in classInfo.methods) {
-		    if (classInfo.methods.hasOwnProperty(key)) {
-				var method = classInfo.methods[key]
-				var methodString = this.generateMethodDeclaration(method)
-				methodString += " {"
-				results.push(methodString,"")
-				results.push.apply(results,method.body)
-				results.push("}","")
-			}
-		}
-		return results
-	},
-	generateDeclaration: function(classInfo, public) {
-		var resultLines = [""]
 		
-		// Imports
-		resultLines.push.apply(resultLines,this.generateImports(classInfo,public))
-		resultLines.push("")
+		return null;
+	},
+	calculateBounds: function(layers) {
+		var minX = Number.MAX_VALUE;
+		var minY = Number.MAX_VALUE;
+		var maxX = Number.MIN_VALUE;
+		var maxY = Number.MIN_VALUE;
+		
+		for (var i=0;i<[layers count];i++) {
+			var layer = layers[i]
 			
-		if (!public) {
-			var classImport = new Import(classInfo.name + ".h")
-			classImport.relative = true
-			resultLines.push(this.generateImport(classImport))
-			resultLines.push("")
+			var frame = [layer frame]
+			
+			if ([frame x]<minX) minX = [frame x]
+			if ([frame y]<minY) minY = [frame y]
+			
+			var frameMaxX = [frame x]+[frame width]
+			var frameMaxY = [frame y]+[frame height]
+			if (frameMaxX>maxX) maxX = frameMaxX
+			if (frameMaxY>maxY) maxY = frameMaxY
+		}
+		
+		var rect = [[MSRect alloc] init];
+		[rect setX:minX];
+		[rect setY:minY];
+		[rect setWidth:maxX-minX];
+		[rect setHeight:maxY-minY];
+		
+		return rect;
+	},
+	addLayerDefaultFillColor: function(layer) {
+		return this.addLayerFillColor(layer,0.5,0.5,0.5);
+	},
+	addLayerFillColor: function(layer,red,green,blue) {
+		var color = [[[[layer style] fills] addNewStylePart] color]
+		[color setRed:red];
+		[color setGreen:green];
+		[color setBlue:blue];
+	},
+	
+	scaleLayerToSize: function(layer,width,height,round) {
+		
+		if (round==undefined) round = true;
+		
+		if (round) {
+			width = Math.round(width)
+			height = Math.round(height)
+		}
+		
+		var locked = [layer isLocked];
+		if (locked) [layer setIsLocked:false];
+
+		frame = [layer frame];
+
+		oldWidth = [frame width]
+		oldHeight = [frame height]
+		proportion = width/oldWidth
+		hProportion = height/oldHeight
+		
+		if (proportion==hProportion) {
+			var midX=layer.frame().midX();
+			var midY=layer.frame().midY();
+
+			layer.multiplyBy(proportion);
+
+			// Translate frame to the original center point.
+			layer.frame().midX = midX;
+			layer.frame().midY = midY;
+			return
+		}
+		
+		// borders = [[layer style] borders];
+// 		for (var w=0;w<borders.length();w++) {
+// 			border = borders[w];
+// 			var thickness = [border thickness];
+// 			if (thickness!=undefined) {
+// 				thickness = thickness*proportion;
+// 				[border setThickness:thickness];				
+// 			}
+// 		}
+		
+		shadows = [[layer style] shadows];
+		for (var w=0;w<shadows.length();w++) {
+			shadow = shadows[w];
+			
+			var offsetX = [shadow offsetX];
+			offsetX = offsetX*proportion;
+			[shadow setOffsetX:offsetX];
+			
+			var offsetY = [shadow offsetY];
+			offsetY = offsetY*proportion;
+			[shadow setOffsetY:offsetY];
+			
+			var blurRadius = [shadow blurRadius];
+			blurRadius = blurRadius*proportion;
+			[shadow setBlurRadius:blurRadius];
+			
+			var spread = [shadow spread];
+			spread = spread*proportion;
+			[shadow setSpread:spread];
+		}
+		
+		innerShadows = [[layer style] innerShadows];
+		for (var w=0;w<innerShadows.length();w++) {
+			innerShadow = innerShadows[w];
+			
+			var offsetX = [innerShadow offsetX];
+			offsetX = offsetX*proportion;
+			[innerShadow setOffsetX:offsetX];
+			
+			var offsetY = [innerShadow offsetY];
+			offsetY = offsetY*proportion;
+			[innerShadow setOffsetY:offsetY];
+			
+			var blurRadius = [innerShadow blurRadius];
+			blurRadius = blurRadius*proportion;
+			[innerShadow setBlurRadius:blurRadius];
+			
+			var spread = [innerShadow spread];
+			spread = spread*proportion;
+			[innerShadow setSpread:spread];
+		}
+		
+		[frame setWidth:Math.round(width)];
+		[frame setHeight:Math.round(height)];
+		
+		[layer setIsLocked:locked];
+	},
+	dump: function(obj){
+	  log("######################################")
+	  log("## Dumping object " + obj )
+	  log("## obj class is: " + [obj className])
+	  log("######################################")
+
+	  log("obj.mocha:")
+	  log([obj class].mocha())
+
+	  log("obj.properties:")
+	  log([obj class].mocha().properties())
+	  log("obj.propertiesWithAncestors:")
+	  log([obj class].mocha().propertiesWithAncestors())
+
+	  log("obj.classMethods:")
+	  log([obj class].mocha().classMethods())
+	  log("obj.classMethodsWithAncestors:")
+	  log([obj class].mocha().classMethodsWithAncestors())
+
+	  log("obj.instanceMethods:")
+	  log([obj class].mocha().instanceMethods())
+	  log("obj.instanceMethodsWithAncestors:")
+	  log([obj class].mocha().instanceMethodsWithAncestors())
+
+	  log("obj.instanceVariables:")
+	  log([obj class].mocha().instanceVariables())
+
+
+	  log("obj.protocols:")
+	  log([obj class].mocha().protocols())
+	  log("obj.protocolsWithAncestors:")
+	  log([obj class].mocha().protocolsWithAncestors())
+
+	  log("obj.treeAsDictionary():")
+	  log(obj.treeAsDictionary())
+	},
+
+	isGroup: function(layer) {
+	  return [layer isMemberOfClass:[MSLayerGroup class]] || [layer isMemberOfClass:[MSArtboardGroup class]]
+	},
+
+	readAnimationParameters: function(layer) {
+		var pattern = /(.*)_animation\((.*)\)/gm
+		var layerName = layer.name()
+		var match = pattern.exec(layerName)
+		if (match==null) return null
+	
+		var animatedLayerName = match[1]
+		var parameters = match[2]
+		var paramsArray = parameters.split(",")
+		
+		var info = { layerName: finalLayerNameFromString(animatedLayerName) }
+
+		var animationName = paramsArray.shift()
+		var duration = paramsArray.shift()
+		var repeatCount = paramsArray.shift()
+
+		if (animationName) info.animationName = animationName
+		if (duration) info.duration = duration
+		if (repeatCount) info.repeatCount = repeatCount
+
+		return info
+	},
+
+	isAnimation: function(layer) {
+		var info = this.readAnimationParameters(layer)
+		if (info==null) return false
+		return true
+	},
+
+	firstStylePart: function(parts) {
+		if ([parts count]>0) {
+			var firstPart = null
+			for (var partIndex = 0; partIndex < [parts count]; partIndex++) {
+				var part = [parts objectAtIndex:partIndex]
+				if ([part isEnabled]) {
+					firstPart = part
+					break;
+				}
+			}
+			return firstPart
+		}
+		return null
+	},
+
+	isGradientFill: function(fill) {
+		return ([fill fillType]==1)
+	},
+
+	isGradientLayer: function(layer) {
+		var layerStyle = [layer style]
+
+		var firstFill = this.firstStylePart([layerStyle fills])
+		
+		return this.isGradientFill(firstFill)
+	},
+
+	firstLetterUppercase: function(string) {
+		return string.charAt(0).toUpperCase() + string.slice(1);
+	},
+
+	allValuesEqual: function(array) {
+		if (array.length==0) return false
+		
+		for (var i = array.length - 1; i > 0; i--) {
+			if (array[i]!=array[0]) return false
 		}
 	
-		if (public && classInfo.designable) {
-			resultLines.push("IB_DESIGNABLE")
-		}
-		
-		// Interface
-		var protocolsString = classInfo.protocols.join(",")
-		var interfaceString = "@interface " + classInfo.name
-			
-		if (public) {
-			interfaceString += " : " + classInfo.parentClass	
-		} 
-		else {
-			interfaceString += "()"
-		}
-		
-		if (protocolsString.length>0) {
-			interfaceString += "<" + protocolsString + ">"
-		}
-		
-		resultLines.push(interfaceString)
-		resultLines.push("")
-		resultLines.push.apply(resultLines,this.generateProperties(classInfo,public))
-		resultLines.push("")
-		
-		if (public) {
-			resultLines.push.apply(resultLines,this.generateMethods(classInfo,public))
-		}
-		
-		resultLines.push("","@end","")
-		
-		return resultLines
+		return true
 	},
-	generateHeader : function(classInfo) {
-		var resultLines = this.generateDeclaration(classInfo,true)
-		return resultLines.join("\n")
-	},
-	generateImplementation: function(classInfo) {
-		var resultLines = this.generateDeclaration(classInfo,false)
-			
-		resultLines.push("@implementation " + classInfo.name,"")
-		
-		resultLines.push.apply(resultLines,this.generateMethodsBody(classInfo))
-		
-		resultLines.push("","@end","")
-			
-		return resultLines.join("\n")
+
+	isVisible: function(layer) {
+		if (this.isAnimation(layer)) return true
+		return layer.isVisible()
 	}
-}	
+}
+
+
+

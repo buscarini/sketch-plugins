@@ -2,6 +2,26 @@
 
 Plugins for Bohemian Coding Sketch
 
+## Export Selection as Objc view
+
+This plugin takes the current selection and exports an Objective-C view from it. It creates shape layers to represent the same graphics as in Sketch. Also supports animations.
+
+### What works
+
+- Opacity
+- First solid color fill
+- First border solid color
+- First drop shadow (Except spread)
+- Shapes
+- Animate shape, fill color, layer opacity, shadow color, shadow blur radius, shadow position, border width, border color
+
+### Limitations
+
+- When animating, the layer is not scaled to the view size (in works)
+- Gradients are not working (Might in the future)
+- Doesn't animate layer position
+- All layer names must be unique
+
 ## Duplicate to All Artboards
 
 This plugin takes the selected layers and makes a copy for each artboard in the page, scaling them in the process:

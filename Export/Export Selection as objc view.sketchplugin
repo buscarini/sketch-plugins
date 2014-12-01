@@ -4,113 +4,6 @@
 
 // Utility functions
 
-function dump(obj){
-  log("######################################")
-  log("## Dumping object " + obj )
-  log("## obj class is: " + [obj className])
-  log("######################################")
-
-  log("obj.mocha:")
-  log([obj class].mocha())
-
-  log("obj.properties:")
-  log([obj class].mocha().properties())
-  log("obj.propertiesWithAncestors:")
-  log([obj class].mocha().propertiesWithAncestors())
-
-  log("obj.classMethods:")
-  log([obj class].mocha().classMethods())
-  log("obj.classMethodsWithAncestors:")
-  log([obj class].mocha().classMethodsWithAncestors())
-
-  log("obj.instanceMethods:")
-  log([obj class].mocha().instanceMethods())
-  log("obj.instanceMethodsWithAncestors:")
-  log([obj class].mocha().instanceMethodsWithAncestors())
-
-  log("obj.instanceVariables:")
-  log([obj class].mocha().instanceVariables())
-
-
-  log("obj.protocols:")
-  log([obj class].mocha().protocols())
-  log("obj.protocolsWithAncestors:")
-  log([obj class].mocha().protocolsWithAncestors())
-
-  log("obj.treeAsDictionary():")
-  log(obj.treeAsDictionary())
-}
-
-function isGroup(layer) {
-  return [layer isMemberOfClass:[MSLayerGroup class]] || [layer isMemberOfClass:[MSArtboardGroup class]]
-}
-
-function readAnimationParameters(layer) {
-	var pattern = /(.*)_animation\((.*)\)/gm
-	var layerName = layer.name()
-	var match = pattern.exec(layerName)
-	if (match==null) return null
-	
-	var animatedLayerName = match[1]
-	var parameters = match[2]
-	var paramsArray = parameters.split(",")
-		
-	var info = { layerName: finalLayerNameFromString(animatedLayerName) }
-
-	var animationName = paramsArray.shift()
-	var duration = paramsArray.shift()
-	var repeatCount = paramsArray.shift()
-
-	if (animationName) info.animationName = animationName
-	if (duration) info.duration = duration
-	if (repeatCount) info.repeatCount = repeatCount
-
-	return info
-}
-
-function isAnimation(layer) {
-	var info = readAnimationParameters(layer)
-	if (info==null) return false
-	return true
-}
-
-function firstStylePart(parts) {
-	if ([parts count]>0) {
-		var firstPart = null
-		for (var partIndex = 0; partIndex < [parts count]; partIndex++) {
-			var part = [parts objectAtIndex:partIndex]
-			if ([part isEnabled]) {
-				firstPart = part
-				break;
-			}
-		}
-		return firstPart
-	}
-	return null
-}
-
-function isGradientFill(fill) {
-	return ([fill fillType]==1)
-}
-
-function isGradientLayer(layer) {
-	var layerStyle = [layer style]
-
-	var firstFill = firstStylePart([layerStyle fills])
-		
-	return isGradientFill(firstFill)
-}
-
-function allValuesEqual(array) {
-	if (array.length==0) return false
-		
-	for (var i = array.length - 1; i > 0; i--) {
-		if (array[i]!=array[0]) return false
-	}
-	
-	return true
-}
-
 function addAnimationValue(animationInfo,layerName,key,value) {
 	if (!animationInfo) return
 	if (!animationInfo.keyPaths[key]) animationInfo.keyPaths[key] = {}
@@ -121,10 +14,6 @@ function addAnimationValue(animationInfo,layerName,key,value) {
 	animationInfo.keyPaths[key][layerName].push(value)
 }
 
-function isVisible(layer) {
-	if (isAnimation(layer)) return true
-	return layer.isVisible()
-}
 
 function finalLayerNameFromString(layerName) {
 	var name = com.buscarini.utils.nameForVariable(layerName)
@@ -140,9 +29,6 @@ function finalViewName(name) {
 	return com.buscarini.utils.appendSuffixOnce(viewName,"View")
 }
 
-function firstLetterUppercase(string) {
-	return string.charAt(0).toUpperCase() + string.slice(1);
-}
 
 // Processing functions
 
@@ -152,10 +38,10 @@ function processLayerStyle(layerName,layer,generationInfo,classInfo) {
 
 	var performInit = classInfo.methods["performInit"]
 
-	var firstFill = firstStylePart([layerStyle fills])
+	var firstFill = com.buscarini.utils.firstStylePart([layerStyle fills])
 		
 	if (firstFill) {
-		if (!isGradientFill(firstFill)) {
+		if (!com.buscarini.utils.isGradientFill(firstFill)) {
 			var fillColor = [firstFill color]
 
 			var colorString = "[UIColor colorWithRed:"+[fillColor red]+" green:"+[fillColor green]+" blue:"+[fillColor blue]+" alpha:"+[fillColor alpha]+"].CGColor"
@@ -195,11 +81,11 @@ function processLayerStyle(layerName,layer,generationInfo,classInfo) {
 		}
 	}
 	
-	if (isGradientFill(firstFill)) {
+	if (com.buscarini.utils.isGradientFill(firstFill)) {
 		layerName = layerName + "Mask"
 	}
 
-	var firstBorder = firstStylePart([layerStyle borders])
+	var firstBorder = com.buscarini.utils.firstStylePart([layerStyle borders])
 
 	if (firstBorder) {
 		var borderColor = [firstBorder color]
@@ -216,7 +102,7 @@ function processLayerStyle(layerName,layer,generationInfo,classInfo) {
 		)
 	}
 	
-	var firstShadow = firstStylePart([layerStyle shadows])
+	var firstShadow = com.buscarini.utils.firstStylePart([layerStyle shadows])
 	if (firstShadow) {
 		var shadowColor = [firstShadow color]
 		
@@ -309,12 +195,12 @@ function processBezierLayerPath(layer,parentLayer,rootFrame,generationInfo,class
 			
 		var grandpaLayerName = finalLayerName(grandpaGroup)
 			
-		//layerName += firstLetterUppercase(grandpaLayerName)
+		//layerName += com.buscarini.utils.firstLetterUppercase(grandpaLayerName)
 
 		var path = layer.path()
 				
-		var methodName = "new"+firstLetterUppercase(layerName)
-		if (!isAnimation(grandpaGroup)) methodName += firstLetterUppercase(grandpaLayerName)
+		var methodName = "new"+com.buscarini.utils.firstLetterUppercase(layerName)
+		if (!com.buscarini.utils.isAnimation(grandpaGroup)) methodName += com.buscarini.utils.firstLetterUppercase(grandpaLayerName)
 		methodName += "Path"
 
 		addAnimationValue(generationInfo.currentAnimationInfo,layerName,"path","(id)[self "+methodName +"].CGPath")
@@ -383,7 +269,7 @@ function processBezierLayer(layer,parentLayer,rootFrame,generationInfo,classInfo
 			
 			var layerMaskName = layerName + "Mask"
 				
-			var isGradient = isGradientLayer(parentGroup)
+			var isGradient = com.buscarini.utils.isGradientLayer(parentGroup)
 				
 			if (isGradient) {
 				layerProperty = new Property("CAGradientLayer *",layerName)
@@ -431,7 +317,7 @@ function processBezierLayer(layer,parentLayer,rootFrame,generationInfo,classInfo
 			)
 			
 			
-			var layoutMethodName = "layoutLayer" + firstLetterUppercase(layerName)
+			var layoutMethodName = "layoutLayer" + com.buscarini.utils.firstLetterUppercase(layerName)
 			var layoutLayerView = new Method("void",layoutMethodName)
 			classInfo.methods[layoutMethodName] = layoutLayerView
 
@@ -547,23 +433,25 @@ function processAnimationKey(keyPath,animationInfo,classInfo) {
 	    if (animationDic.hasOwnProperty(key)) {
 			var animationValues = animationDic[key]
 				
-			if (allValuesEqual(animationValues)) return
+			if (com.buscarini.utils.allValuesEqual(animationValues)) return
 
 			var animationValuesString = animationValues.join(",")
 			
 			var layerName = key
 
 			var repeatCount = animationInfo.repeatCount
+				log(repeatCount)
 			if (repeatCount=="always" || repeatCount=="infinite") repeatCount = "HUGE_VALF"
+				log(repeatCount)
 
-			var animationName = layerName+firstLetterUppercase(keyPath)+"Animation"
+			var animationName = layerName+com.buscarini.utils.firstLetterUppercase(keyPath)+"Animation"
 
 			var animationMethod = classInfo.methods[animationInfo.animationName]
 			animationMethod.body.push(
 				"\tCAKeyframeAnimation *"+animationName+" = [CAKeyframeAnimation animationWithKeyPath:@\""+keyPath+"\"];",
 				"\t"+animationName+".duration = "+animationInfo.duration+";",
 				"\t"+animationName+".timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut];",
-				"\t"+animationName+".repeatCount = "+animationInfo.repeatCount+";",
+				"\t"+animationName+".repeatCount = "+repeatCount+";",
 				"\t"+animationName+".autoreverses = YES;",
 				"\t"+animationName+".values = @["+animationValuesString+"];",
 				"\t[self."+layerName+" addAnimation:"+animationName+" forKey:@\""+keyPath+"\"];",
@@ -576,9 +464,9 @@ function processAnimationKey(keyPath,animationInfo,classInfo) {
 function processLayerAnimation(layer,parentLayer,rootFrame,generationInfo,classInfo) {
 	log("processing layer animation for " + layer)
 		
-	if (isGroup(layer)) {
-		if (isAnimation(layer)) {
-			generationInfo.currentAnimationInfo = readAnimationParameters(layer)
+	if (com.buscarini.utils.isGroup(layer)) {
+		if (com.buscarini.utils.isAnimation(layer)) {
+			generationInfo.currentAnimationInfo = com.buscarini.utils.readAnimationParameters(layer)
 			
 			var animationMethod = new IBActionMethod(generationInfo.currentAnimationInfo.animationName)
 			classInfo.methods[generationInfo.currentAnimationInfo.animationName] = animationMethod
@@ -634,10 +522,10 @@ function processLayer(layer,parentLayer,rootFrame,generationInfo,classInfo) {
 	log("processing layer " + layer)
 
 	// if (!layer || !layer.isVisible()) return
-	if (!layer || !isVisible(layer)) return null
+	if (!layer || !com.buscarini.utils.isVisible(layer)) return null
 			
-	if (isGroup(layer)) {
-		if (isAnimation(layer) || generationInfo.currentAnimationInfo) {
+	if (com.buscarini.utils.isGroup(layer)) {
+		if (com.buscarini.utils.isAnimation(layer) || generationInfo.currentAnimationInfo) {
 			processLayerAnimation(layer,parentLayer,rootFrame,generationInfo,classInfo)
 		}
 		else {
