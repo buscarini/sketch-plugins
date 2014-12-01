@@ -155,6 +155,11 @@ function processPoint(layerName,index,previousPoint,point,absoluteRect,rootFrame
 // 	var proportion = proportionW
 // 	if (proportionW>proportionH) proportion = proportionH
 	
+	// com.buscarini.utils.dump(point)
+	// com.buscarini.utils.dump(point.point())
+	
+	log("curve mode " +  [point curveMode])
+	
 	var originX = 0//[absoluteRect x]
 	var originY = 0//[absoluteRect y]
 	
@@ -171,9 +176,21 @@ function processPoint(layerName,index,previousPoint,point,absoluteRect,rootFrame
 		method.body.push("\t["+layerName+"Path moveToPoint:CGPointMake("+x+","+y+")];")
 	}
 	else if (point.curveFrom() && point.curveTo()) {
+		// 1 straight, 2 mirrored, 3 asymmetric, 4 disconnected
+		
+		if ([point curveMode]==1) {
+			controlPoint2x = x
+			controlPoint2y = y
+		}
+		
+		if ([previousPoint curveMode]==1) {
+			controlPoint1x = (previousPoint.point().x*[absoluteRect width]+originX)*proportion
+			controlPoint1y = (previousPoint.point().y*[absoluteRect height]+originY)*proportion
+		}
+		
 		method.body.push("\t["+layerName+"Path addCurveToPoint:CGPointMake("+x+","+y+") controlPoint1:CGPointMake("+controlPoint1x+","+controlPoint1y+") controlPoint2:CGPointMake("+controlPoint2x+","+controlPoint2y+")];")
 	}
-	else {
+	else {	
 		method.body.push("\t["+layerName+"Path addLineToPoint:CGPointMake("+x+","+y+")];")
 	}
 }

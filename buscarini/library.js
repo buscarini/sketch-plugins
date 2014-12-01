@@ -7,7 +7,7 @@ com.buscarini = {}
 #import '../buscarini/objc_code_generation.js'
 
 com.buscarini.utils = {
-	uniqueId: 1,
+	uniqueId: 0,
 	goldenRatio : 1.61803398875,
 	e : 2.7182818284590452353602874,
 	increaseColorBrightness: function(color,inc) {
