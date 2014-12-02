@@ -328,6 +328,3 @@ com.buscarini.utils = {
 		return layer.isVisible()
 	}
 }
-
-
-
