@@ -145,10 +145,10 @@ function processLayerStyle(layerName,layer,generationInfo,classInfo) {
 	// 	}
 }
 
-function processPoint(layerName,index,previousPoint,point,absoluteRect,rootFrame,generationInfo,method) {
+function processPoint(layerName,index,previousPoint,point,absoluteRect,rootLayer,generationInfo,method) {
 
-	// var proportionW = [absoluteRect width]/[rootFrame width]
-// 	var proportionH = [absoluteRect height]/[rootFrame height]
+	// var proportionW = [absoluteRect width]/[rootLayer width]
+// 	var proportionH = [absoluteRect height]/[rootLayer height]
 //
 // 	log("Proportions:" + proportionW + " " + proportionH)
 //
@@ -195,7 +195,7 @@ function processPoint(layerName,index,previousPoint,point,absoluteRect,rootFrame
 	}
 }
 
-function processBezierLayerPath(layer,parentLayer,rootFrame,generationInfo,classInfo) {
+function processBezierLayerPath(layer,parentLayer,rootLayer,generationInfo,classInfo) {
 	log("processing bezier layer path " + layer)
 	
 	if(layer && layer.isKindOfClass(MSShapePathLayer)) {
@@ -244,13 +244,13 @@ function processBezierLayerPath(layer,parentLayer,rootFrame,generationInfo,class
 			    previousPoint = [points objectAtIndex:j-1]
 			}
 			
-			processPoint(layerName,j,previousPoint,point,absoluteRect,rootFrame,generationInfo,pathMethod)
+			processPoint(layerName,j,previousPoint,point,absoluteRect,rootLayer,generationInfo,pathMethod)
 			
 			if (j==[points count]-1) {
 				point = [points objectAtIndex:0]
 				
 			    previousPoint = [points objectAtIndex:j]
-				processPoint(layerName,j,previousPoint,point,absoluteRect,rootFrame,generationInfo,pathMethod)
+				processPoint(layerName,j,previousPoint,point,absoluteRect,rootLayer,generationInfo,pathMethod)
 			}
 		}
 		
@@ -264,7 +264,7 @@ function processBezierLayerPath(layer,parentLayer,rootFrame,generationInfo,class
 	}	
 }
 
-function processBezierLayer(layer,parentLayer,rootFrame,generationInfo,classInfo) {
+function processBezierLayer(layer,parentLayer,rootLayer,generationInfo,classInfo) {
 	log("processing bezier layer " + layer)
 	
 	if(layer && layer.isKindOfClass(MSShapePathLayer)) {
@@ -282,7 +282,7 @@ function processBezierLayer(layer,parentLayer,rootFrame,generationInfo,classInfo
 		var currentFrame = [layer frame]
 		
 		if (generationInfo.currentAnimationInfo) {
-			processBezierLayerPath(layer,parentLayer,rootFrame,generationInfo,classInfo)
+			processBezierLayerPath(layer,parentLayer,rootLayer,generationInfo,classInfo)
 			processLayerStyle(layerName,parentGroup,generationInfo,classInfo)
 		}
 		else {
@@ -307,7 +307,7 @@ function processBezierLayer(layer,parentLayer,rootFrame,generationInfo,classInfo
 				classInfo.properties[layerName] = layerProperty				
 			}
 
-			var methodName = processBezierLayerPath(layer,parentLayer,rootFrame,generationInfo,classInfo)
+			var methodName = processBezierLayerPath(layer,parentLayer,rootLayer,generationInfo,classInfo)
 		
 			var performInit = classInfo.methods["performInit"]
 			performInit.body.push(
@@ -332,11 +332,24 @@ function processBezierLayer(layer,parentLayer,rootFrame,generationInfo,classInfo
 				)
 			}
 		
+			var x = [frame x]
+			var y = [frame y]
+			var width = [frame width]
+			var height = [frame height]
+
+			log("parent Group: " + parentGroup)
+			log("rootLayer: " + rootLayer)
+
+			if (parentGroup==rootLayer) {
+				x = 0
+				y = 0
+			}
+		
 			performInit.body.push(
 				"",
 				"\t["+parentLayer+" insertSublayer:self."+layerName+" atIndex:0];",
 				"",
-				"\tself."+layerName+".frame = CGRectMake("+[frame x]+","+[frame y]+","+[frame width]+","+[frame height]+");",
+				"\tself."+layerName+".frame = CGRectMake("+x+","+y+","+width+","+height+");",
 				""
 			)
 			
@@ -352,7 +365,7 @@ function processBezierLayer(layer,parentLayer,rootFrame,generationInfo,classInfo
 							"")
 		
 			layoutLayerView.body.push(
-				"\tCGRect "+layerName+"BoundingBox = CGRectMake(0,0,"+[rootFrame width]+","+[rootFrame height]+");",
+				"\tCGRect "+layerName+"BoundingBox = self."+layerName+".bounds;",//CGRectMake(0,0,"+[rootLayer width]+","+[rootLayer height]+");",
 		        "\t",
 				"\tCGFloat "+layerName+"BoundingBoxAspectRatio = CGRectGetWidth("+layerName+"BoundingBox)/CGRectGetHeight("+layerName+"BoundingBox);",
 				"\tCGFloat "+layerName+"ViewAspectRatio = CGRectGetWidth(self.frame)/CGRectGetHeight(self.frame);",
@@ -364,20 +377,25 @@ function processBezierLayer(layer,parentLayer,rootFrame,generationInfo,classInfo
 				"\t	"+layerName+"ScaleFactor = CGRectGetHeight(self.frame)/CGRectGetHeight("+layerName+"BoundingBox);",
 				"\t}",
 		        "\t",
-		        "\t",
-				"\tCGAffineTransform "+layerName+"ScaleTransform = CGAffineTransformIdentity;",
-				"\t"+layerName+"ScaleTransform = CGAffineTransformScale("+layerName+"ScaleTransform, "+layerName+"ScaleFactor, "+layerName+"ScaleFactor);",
-				"\t"+layerName+"ScaleTransform = CGAffineTransformTranslate("+layerName+"ScaleTransform, -CGRectGetMinX("+layerName+"BoundingBox), -CGRectGetMinY("+layerName+"BoundingBox));",
-		        "\t",
-				"\tCGSize "+layerName+"ScaledSize = CGSizeApplyAffineTransform("+layerName+"BoundingBox.size, CGAffineTransformMakeScale("+layerName+"ScaleFactor, "+layerName+"ScaleFactor));",
-				"\tCGSize "+layerName+"CenterOffset = CGSizeMake((CGRectGetWidth(self.frame)-"+layerName+"ScaledSize.width)/("+layerName+"ScaleFactor*2.0),",
-				"\t								 (CGRectGetHeight(self.frame)-"+layerName+"ScaledSize.height)/("+layerName+"ScaleFactor*2.0));",
-				"\t"+layerName+"ScaleTransform = CGAffineTransformTranslate("+layerName+"ScaleTransform, "+layerName+"CenterOffset.width, "+layerName+"CenterOffset.height);",
-		        "\t",
-				"\tself."+layerName+".frame = CGRectMake(self."+layerName+".frame.origin.x*"+layerName+"ScaleFactor,self."+layerName+".frame.origin.y*"+layerName+"ScaleFactor,self."+layerName+".frame.size.width,self."+layerName+".frame.size.height);"
+				"\tCATransform3D transform = CATransform3DIdentity;",
+				"\ttransform = CATransform3DTranslate(transform,(self.bounds.size.width-"+layerName+"BoundingBox.size.width)/2, (self.bounds.size.height-"+layerName+"BoundingBox.size.height)/2, 0);",
+				"\ttransform = CATransform3DScale(transform, "+layerName+"ScaleFactor, "+layerName+"ScaleFactor, "+layerName+"ScaleFactor);",
+				"\tself."+layerName+".transform = transform;"
+				
+		        // "\t",
+// 				"\tCGAffineTransform "+layerName+"ScaleTransform = CGAffineTransformIdentity;",
+// 				"\t"+layerName+"ScaleTransform = CGAffineTransformScale("+layerName+"ScaleTransform, "+layerName+"ScaleFactor, "+layerName+"ScaleFactor);",
+// 				"\t"+layerName+"ScaleTransform = CGAffineTransformTranslate("+layerName+"ScaleTransform, -CGRectGetMinX("+layerName+"BoundingBox), -CGRectGetMinY("+layerName+"BoundingBox));",
+// 		        "\t",
+// 				"\tCGSize "+layerName+"ScaledSize = CGSizeApplyAffineTransform("+layerName+"BoundingBox.size, CGAffineTransformMakeScale("+layerName+"ScaleFactor, "+layerName+"ScaleFactor));",
+// 				"\tCGSize "+layerName+"CenterOffset = CGSizeMake((CGRectGetWidth(self.frame)-"+layerName+"ScaledSize.width)/("+layerName+"ScaleFactor*2.0),",
+// 				"\t								 (CGRectGetHeight(self.frame)-"+layerName+"ScaledSize.height)/("+layerName+"ScaleFactor*2.0));",
+// 				"\t"+layerName+"ScaleTransform = CGAffineTransformTranslate("+layerName+"ScaleTransform, "+layerName+"CenterOffset.width, "+layerName+"CenterOffset.height);",
+// 		        "\t",
+// 				"\tself."+layerName+".frame = CGRectMake(self."+layerName+".frame.origin.x*"+layerName+"ScaleFactor,self."+layerName+".frame.origin.y*"+layerName+"ScaleFactor,self."+layerName+".frame.size.width,self."+layerName+".frame.size.height);"
 			)
 			
-			if (isGradient) {
+			/*if (isGradient) {
 				layoutLayerView.body.push(
 					"\tCGPathRef "+layerName+"Path = CGPathCreateCopyByTransformingPath(self."+layerMaskName+".path,&"+layerName+"ScaleTransform);",
 					"\t",
@@ -396,13 +414,13 @@ function processBezierLayer(layer,parentLayer,rootFrame,generationInfo,classInfo
 					"\tself."+layerName+".shadowOffset = CGSizeMake(self."+layerName+".shadowOffset.width*"+layerName+"ScaleFactor,self."+layerName+".shadowOffset.height*"+layerName+"ScaleFactor);",
 					"\tself."+layerName+".shadowRadius = self."+layerName+".shadowRadius*"+layerName+"ScaleFactor;"
 				)				
-			}
+			}*/
 			
-			layoutLayerView.body.push(
+			/*layoutLayerView.body.push(
 		        "\t",
 				"\tCGPathRelease("+layerName+"Path); ",
 				""
-			)
+			)*/
 		
 			processLayerStyle(layerName,parentGroup,generationInfo,classInfo)
 			performInit.body.push("")
@@ -416,13 +434,13 @@ function processBezierLayer(layer,parentLayer,rootFrame,generationInfo,classInfo
 	return null
 }
 
-function processContainerLayer(layer,parentLayer,rootFrame,generationInfo,classInfo) {
+function processContainerLayer(layer,parentLayer,rootLayer,generationInfo,classInfo) {
 	var layerName = finalLayerName(layer)
 	var frame = [layer frame]
 	
 	var layerProperty = new Property("CALayer *",layerName)
 		
-	log("layer" + layer + "parentLayer" + parentLayer + "rootFrame" + rootFrame + "generationInfo" + generationInfo + "classInfo" + classInfo)
+	log("layer" + layer + "parentLayer" + parentLayer + "rootLayer" + rootLayer + "generationInfo" + generationInfo + "classInfo" + classInfo)
 		
 	classInfo.properties[layerName] = layerProperty
 	
@@ -487,7 +505,7 @@ function processAnimationKey(keyPath,animationInfo,classInfo) {
 	}
 }
 
-function processLayerAnimation(layer,parentLayer,rootFrame,generationInfo,classInfo) {
+function processLayerAnimation(layer,parentLayer,rootLayer,generationInfo,classInfo) {
 	log("processing layer animation for " + layer)
 		
 	if (com.buscarini.utils.isGroup(layer)) {
@@ -509,7 +527,7 @@ function processLayerAnimation(layer,parentLayer,rootFrame,generationInfo,classI
 		    for (var sub=([sublayers count] - 1); sub >= 0; sub--) {
 		        var sublayer = [sublayers objectAtIndex:sub]
 				generationInfo.currentLevel = generationInfo.currentLevel+1		
-				processLayer(sublayer,parentLayer,rootFrame,generationInfo,classInfo)
+				processLayer(sublayer,parentLayer,rootLayer,generationInfo,classInfo)
 				generationInfo.currentLevel = generationInfo.currentLevel-1
 			}
 			
@@ -532,20 +550,20 @@ function processLayerAnimation(layer,parentLayer,rootFrame,generationInfo,classI
 		    for (var sub=([sublayers count] - 1); sub >= 0; sub--) {
 		        var sublayer = [sublayers objectAtIndex:sub]
 				generationInfo.currentLevel = generationInfo.currentLevel+1		
-				processLayer(sublayer,parentLayer,rootFrame,generationInfo,classInfo)
+				processLayer(sublayer,parentLayer,rootLayer,generationInfo,classInfo)
 				generationInfo.currentLevel = generationInfo.currentLevel-1
 			}
 		}
 	}
 	else {
 		
-		processBezierLayer(layer,parentLayer,rootFrame,generationInfo,classInfo)
-		// var methodName = processBezierLayerPath(layer,parentLayer,rootFrame,generationInfo,classInfo)
+		processBezierLayer(layer,parentLayer,rootLayer,generationInfo,classInfo)
+		// var methodName = processBezierLayerPath(layer,parentLayer,rootLayer,generationInfo,classInfo)
 		
 	}
 }
 
-function processLayer(layer,parentLayer,rootFrame,generationInfo,classInfo) {
+function processLayer(layer,parentLayer,rootLayer,generationInfo,classInfo) {
 	log("processing layer " + layer)
 
 	// if (!layer || !layer.isVisible()) return
@@ -553,39 +571,43 @@ function processLayer(layer,parentLayer,rootFrame,generationInfo,classInfo) {
 			
 	if (com.buscarini.utils.isGroup(layer)) {
 		if (com.buscarini.utils.isAnimation(layer) || generationInfo.currentAnimationInfo) {
-			processLayerAnimation(layer,parentLayer,rootFrame,generationInfo,classInfo)
+			processLayerAnimation(layer,parentLayer,rootLayer,generationInfo,classInfo)
 		}
 		else {
-			var layerName = processContainerLayer(layer,parentLayer,rootFrame,generationInfo,classInfo)
+			var layerName = processContainerLayer(layer,parentLayer,rootLayer,generationInfo,classInfo)
 			
 		    var sublayers = [layer layers];
 		    for (var sub=([sublayers count] - 1); sub >= 0; sub--) {
 		        var sublayer = [sublayers objectAtIndex:sub]
 				generationInfo.currentLevel = generationInfo.currentLevel+1
-				processLayer(sublayer,"self."+layerName,rootFrame,generationInfo,classInfo)
+				processLayer(sublayer,"self."+layerName,rootLayer,generationInfo,classInfo)
 				generationInfo.currentLevel = generationInfo.currentLevel-1
 			}
 		}
 	}
 	else if (layer.isKindOfClass(MSShapeGroup))  {
-		log("Flattening layer")
+
 		var layerCopy = [layer duplicate]
 		[layerCopy flatten]
 
 		sublayer = [[layerCopy layers] objectAtIndex:0]
+
+		if (layer==rootLayer) {
+			rootLayer = layerCopy
+		}
 			
 		generationInfo.currentLevel = generationInfo.currentLevel+1
-		processLayer(sublayer,parentLayer,rootFrame,generationInfo,classInfo)
+		processLayer(sublayer,parentLayer,rootLayer,generationInfo,classInfo)
 		generationInfo.currentLevel = generationInfo.currentLevel-1
 
 		[layerCopy removeFromParent]
 	}
 	else if (layer.isKindOfClass(MSShapePathLayer)) {
 		if (generationInfo.currentAnimationInfo) {
-			processLayerAnimation(layer,parentLayer,rootFrame,generationInfo,classInfo)
+			processLayerAnimation(layer,parentLayer,rootLayer,generationInfo,classInfo)
 		}
 		else {
-			processBezierLayer(layer,parentLayer,rootFrame,generationInfo,classInfo)
+			processBezierLayer(layer,parentLayer,rootLayer,generationInfo,classInfo)
 				
 		}
 	}
@@ -684,7 +706,7 @@ function main() {
 
 		for (var i=0; i<[selection count]; i++) {
 			var layer = [selection objectAtIndex:i];
-			processLayer(layer,"self.layer",layer.frame(),generationInfo,classInfo)
+			processLayer(layer,"self.layer",layer,generationInfo,classInfo)
 		}
 
 		var header = com.buscarini.objc.generateHeader(classInfo)
