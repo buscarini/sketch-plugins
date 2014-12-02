@@ -132,39 +132,12 @@ function processLayerStyle(layerName,layer,generationInfo,classInfo) {
 		"",
 		"\tself."+layerName+".opacity = " + opacity + ";"
 	)
-	
-	// if ([layer isFlippedHorizontal]) {
-	// 		performInit.body.push(
-	// 			"",
-	// 			"\tself."+layerName+".transform = CATransform3DRotate(self."+layerName+".transform,M_PI, 0, 1, 0);"
-	// 		)
-	// 	}
-	//
-	// 	if ([layer isFlippedVertical]) {
-	// 		performInit.body.push(
-	// 			"",
-	// 			"\tself."+layerName+".transform = CATransform3DRotate(self."+layerName+".transform,M_PI, 1, 0, 0);"
-	// 		)
-	// 	}
 }
 
 function processPoint(layerName,index,previousPoint,point,absoluteRect,rootLayer,generationInfo,method) {
-
-	// var proportionW = [absoluteRect width]/[rootLayer width]
-// 	var proportionH = [absoluteRect height]/[rootLayer height]
-//
-// 	log("Proportions:" + proportionW + " " + proportionH)
-//
-// 	var proportion = proportionW
-// 	if (proportionW>proportionH) proportion = proportionH
 	
-	// com.buscarini.utils.dump(point)
-	// com.buscarini.utils.dump(point.point())
-	
-	log("curve mode " +  [point curveMode])
-	
-	var originX = 0//[absoluteRect x]
-	var originY = 0//[absoluteRect y]
+	var originX = 0
+	var originY = 0
 	
 	var proportion = 1
 	
@@ -214,8 +187,6 @@ function processBezierLayerPath(layer,parentLayer,rootLayer,generationInfo,class
 		log("grandpaGroup: " + grandpaGroup)
 			
 		var grandpaLayerName = finalLayerName(grandpaGroup)
-			
-		//layerName += com.buscarini.utils.firstLetterUppercase(grandpaLayerName)
 
 		var path = layer.path()
 				
@@ -271,18 +242,13 @@ function processBezierLayer(layer,parentLayer,rootLayer,generationInfo,classInfo
 	log("processing bezier layer " + layer)
 	
 	if(layer && layer.isKindOfClass(MSShapePathLayer)) {
-		
-		// var originalLayer = layer;
-		// layer = [layer duplicate]
-		// [layer flattenIfNecessary]
-		
+				
 		var parentGroup = [layer parentGroup]
 		var grandpaGroup = [parentGroup parentGroup]
 		var layerName = finalLayerName(parentGroup)
 		
 		var frame = [parentGroup frame]
 		if (parentGroup!=rootLayer) {
-			// frame = [grandpaGroup frame]
 		}
 			
 		var currentFrame = [layer frame]
@@ -382,7 +348,7 @@ function processBezierLayer(layer,parentLayer,rootLayer,generationInfo,classInfo
 							"")
 		
 			layoutLayerView.body.push(
-				"\tCGRect "+layerName+"BoundingBox = self."+layerName+".bounds;",//CGRectMake(0,0,"+[rootLayer width]+","+[rootLayer height]+");",
+				"\tCGRect "+layerName+"BoundingBox = self."+layerName+".bounds;",
 		        "\t",
 				"\tCGFloat "+layerName+"BoundingBoxAspectRatio = CGRectGetWidth("+layerName+"BoundingBox)/CGRectGetHeight("+layerName+"BoundingBox);",
 				"\tCGFloat "+layerName+"ViewAspectRatio = CGRectGetWidth(self.frame)/CGRectGetHeight(self.frame);",
@@ -398,54 +364,13 @@ function processBezierLayer(layer,parentLayer,rootLayer,generationInfo,classInfo
 				"\ttransform = CATransform3DTranslate(transform,(self.bounds.size.width-"+layerName+"BoundingBox.size.width)/2, (self.bounds.size.height-"+layerName+"BoundingBox.size.height)/2, 0);",
 				"\ttransform = CATransform3DScale(transform, "+layerName+"ScaleFactor, "+layerName+"ScaleFactor, "+layerName+"ScaleFactor);",
 				"\tself."+layerName+".transform = transform;"
-				
-		        // "\t",
-// 				"\tCGAffineTransform "+layerName+"ScaleTransform = CGAffineTransformIdentity;",
-// 				"\t"+layerName+"ScaleTransform = CGAffineTransformScale("+layerName+"ScaleTransform, "+layerName+"ScaleFactor, "+layerName+"ScaleFactor);",
-// 				"\t"+layerName+"ScaleTransform = CGAffineTransformTranslate("+layerName+"ScaleTransform, -CGRectGetMinX("+layerName+"BoundingBox), -CGRectGetMinY("+layerName+"BoundingBox));",
-// 		        "\t",
-// 				"\tCGSize "+layerName+"ScaledSize = CGSizeApplyAffineTransform("+layerName+"BoundingBox.size, CGAffineTransformMakeScale("+layerName+"ScaleFactor, "+layerName+"ScaleFactor));",
-// 				"\tCGSize "+layerName+"CenterOffset = CGSizeMake((CGRectGetWidth(self.frame)-"+layerName+"ScaledSize.width)/("+layerName+"ScaleFactor*2.0),",
-// 				"\t								 (CGRectGetHeight(self.frame)-"+layerName+"ScaledSize.height)/("+layerName+"ScaleFactor*2.0));",
-// 				"\t"+layerName+"ScaleTransform = CGAffineTransformTranslate("+layerName+"ScaleTransform, "+layerName+"CenterOffset.width, "+layerName+"CenterOffset.height);",
-// 		        "\t",
-// 				"\tself."+layerName+".frame = CGRectMake(self."+layerName+".frame.origin.x*"+layerName+"ScaleFactor,self."+layerName+".frame.origin.y*"+layerName+"ScaleFactor,self."+layerName+".frame.size.width,self."+layerName+".frame.size.height);"
 			)
-			
-			/*if (isGradient) {
-				layoutLayerView.body.push(
-					"\tCGPathRef "+layerName+"Path = CGPathCreateCopyByTransformingPath(self."+layerMaskName+".path,&"+layerName+"ScaleTransform);",
-					"\t",
-					"\tself."+layerMaskName+".path = "+layerName+"Path;",
-					"\tself."+layerMaskName+".lineWidth = self."+layerMaskName+".lineWidth*"+layerName+"ScaleFactor;",
-					"\tself."+layerMaskName+".shadowOffset = CGSizeMake(self."+layerMaskName+".shadowOffset.width*"+layerName+"ScaleFactor,self."+layerMaskName+".shadowOffset.height*"+layerName+"ScaleFactor);",
-				"\tself."+layerMaskName+".shadowRadius = self."+layerMaskName+".shadowRadius*"+layerName+"ScaleFactor;"
-				)
-			}
-			else {
-				layoutLayerView.body.push(
-					"\tCGPathRef "+layerName+"Path = CGPathCreateCopyByTransformingPath(self."+layerName+".path,&"+layerName+"ScaleTransform);",
-			        "\t",
-					"\tself."+layerName+".path = "+layerName+"Path;",
-					"\tself."+layerName+".lineWidth = self."+layerName+".lineWidth*"+layerName+"ScaleFactor;",
-					"\tself."+layerName+".shadowOffset = CGSizeMake(self."+layerName+".shadowOffset.width*"+layerName+"ScaleFactor,self."+layerName+".shadowOffset.height*"+layerName+"ScaleFactor);",
-					"\tself."+layerName+".shadowRadius = self."+layerName+".shadowRadius*"+layerName+"ScaleFactor;"
-				)				
-			}*/
-			
-			/*layoutLayerView.body.push(
-		        "\t",
-				"\tCGPathRelease("+layerName+"Path); ",
-				""
-			)*/
 		
 			processLayerStyle(layerName,parentGroup,generationInfo,classInfo)
 			performInit.body.push("")
 		
 			return layerName
 		}
-		
-		// [[layer parentGroup] removeLayer:layer]
 	}
 	
 	return null
@@ -477,7 +402,6 @@ function processContainerLayer(layer,parentLayer,rootLayer,generationInfo,classI
 		"\t// " + layerName,
 		"\tself."+layerName+" = [CALayer layer];",
 		"",
-		// "\t[self.layer addSublayer:self."+layerName+"];",
 		"\t["+parentLayer+" insertSublayer:self."+layerName+" atIndex:0];",
 		"",
 		"\tself."+layerName+".frame = CGRectMake("+x+","+y+","+[frame width]+","+[frame height]+");",
@@ -494,8 +418,7 @@ function processAnimationKey(keyPath,animationInfo,classInfo) {
 	    if (animationDic.hasOwnProperty(key)) {
 			var animationValues = animationDic[key]
 			
-			// TODO: Remove this! Only for debugging!	
-			// if (com.buscarini.utils.allValuesEqual(animationValues)) return
+			if (com.buscarini.utils.allValuesEqual(animationValues)) return
 
 			var animationValuesString = animationValues.join(",")
 			
@@ -556,11 +479,7 @@ function processLayerAnimation(layer,parentLayer,rootLayer,generationInfo,classI
 			processAnimationKey("shadowColor",generationInfo.currentAnimationInfo,classInfo)
 			processAnimationKey("shadowOffset",generationInfo.currentAnimationInfo,classInfo)
 			processAnimationKey("shadowRadius",generationInfo.currentAnimationInfo,classInfo)
-			
-			//// TODO: Removet this! ONLY FOR DEBUGGING!!
-			var performInit = classInfo.methods["performInit"]
-			performInit.body.push("\t[self "+animationMethod.name+":self];")
-			
+						
 			generationInfo.currentAnimationInfo = null
 		}
 		else {
@@ -575,10 +494,7 @@ function processLayerAnimation(layer,parentLayer,rootLayer,generationInfo,classI
 		}
 	}
 	else {
-		
-		processBezierLayer(layer,parentLayer,rootLayer,generationInfo,classInfo)
-		// var methodName = processBezierLayerPath(layer,parentLayer,rootLayer,generationInfo,classInfo)
-		
+		processBezierLayer(layer,parentLayer,rootLayer,generationInfo,classInfo)		
 	}
 }
 
@@ -752,4 +668,3 @@ function main() {
 }
 
 main()
-
