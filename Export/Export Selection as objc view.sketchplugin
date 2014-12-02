@@ -268,6 +268,13 @@ function processBezierLayer(layer,parentLayer,rootFrame,generationInfo,classInfo
 	log("processing bezier layer " + layer)
 	
 	if(layer && layer.isKindOfClass(MSShapePathLayer)) {
+		
+		com.buscarini.utils.dump(layer)
+		
+		// var originalLayer = layer;
+		// layer = [layer duplicate]
+		// [layer flattenIfNecessary]
+		
 		var parentGroup = [layer parentGroup]
 		var layerName = finalLayerName(parentGroup)
 		
@@ -402,6 +409,8 @@ function processBezierLayer(layer,parentLayer,rootFrame,generationInfo,classInfo
 		
 			return layerName
 		}
+		
+		// [[layer parentGroup] removeLayer:layer]
 	}
 	
 	return null
@@ -528,7 +537,8 @@ function processLayerAnimation(layer,parentLayer,rootFrame,generationInfo,classI
 			}
 		}
 	}
-	else {			
+	else {
+		
 		processBezierLayer(layer,parentLayer,rootFrame,generationInfo,classInfo)
 		// var methodName = processBezierLayerPath(layer,parentLayer,rootFrame,generationInfo,classInfo)
 		
@@ -558,17 +568,25 @@ function processLayer(layer,parentLayer,rootFrame,generationInfo,classInfo) {
 		}
 	}
 	else if (layer.isKindOfClass(MSShapeGroup))  {
-		sublayer = [[layer layers] objectAtIndex:0]
+		log("Flattening layer")
+		var layerCopy = [layer duplicate]
+		[layerCopy flatten]
+
+		sublayer = [[layerCopy layers] objectAtIndex:0]
+			
 		generationInfo.currentLevel = generationInfo.currentLevel+1
 		processLayer(sublayer,parentLayer,rootFrame,generationInfo,classInfo)
-		generationInfo.currentLevel = generationInfo.currentLevel-1		
+		generationInfo.currentLevel = generationInfo.currentLevel-1
+
+		[layerCopy removeFromParent]
 	}
 	else if (layer.isKindOfClass(MSShapePathLayer)) {
 		if (generationInfo.currentAnimationInfo) {
 			processLayerAnimation(layer,parentLayer,rootFrame,generationInfo,classInfo)
 		}
 		else {
-			processBezierLayer(layer,parentLayer,rootFrame,generationInfo,classInfo)		
+			processBezierLayer(layer,parentLayer,rootFrame,generationInfo,classInfo)
+				
 		}
 	}
 }
