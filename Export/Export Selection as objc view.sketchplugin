@@ -37,6 +37,9 @@ function processLayerStyle(layerName,layer,generationInfo,classInfo) {
 	var layerStyle = [layer style]
 
 	var performInit = classInfo.methods["performInit"]
+	if (generationInfo.currentAnimationInfo) {
+		performInit = { body: [] }
+	}
 
 	var firstFill = com.buscarini.utils.firstStylePart([layerStyle fills])
 		
@@ -269,19 +272,45 @@ function processBezierLayer(layer,parentLayer,rootLayer,generationInfo,classInfo
 	
 	if(layer && layer.isKindOfClass(MSShapePathLayer)) {
 		
-		com.buscarini.utils.dump(layer)
-		
 		// var originalLayer = layer;
 		// layer = [layer duplicate]
 		// [layer flattenIfNecessary]
 		
 		var parentGroup = [layer parentGroup]
+		var grandpaGroup = [parentGroup parentGroup]
 		var layerName = finalLayerName(parentGroup)
 		
 		var frame = [parentGroup frame]
+		if (parentGroup!=rootLayer) {
+			// frame = [grandpaGroup frame]
+		}
+			
 		var currentFrame = [layer frame]
+			
+		var x = [frame x]
+		var y = [frame y]
+		var width = [frame width]
+		var height = [frame height]
+
+		if (parentGroup==rootLayer) {
+			x = 0
+			y = 0
+		}
+		
+		var positionX = x
+		var positionY = y
+		if (parentGroup!=rootLayer) {
+			positionX = [[grandpaGroup frame] x]
+			positionY = [[grandpaGroup frame] y]
+		}
+		
+		var positionX = positionX+width/2
+		var positionY = positionY+height/2
 		
 		if (generationInfo.currentAnimationInfo) {
+			log("x: " +x + " y: " + y)
+			
+			addAnimationValue(generationInfo.currentAnimationInfo,layerName,"position","[NSValue valueWithCGPoint:CGPointMake("+positionX+","+positionY+")]")
 			processBezierLayerPath(layer,parentLayer,rootLayer,generationInfo,classInfo)
 			processLayerStyle(layerName,parentGroup,generationInfo,classInfo)
 		}
@@ -332,18 +361,7 @@ function processBezierLayer(layer,parentLayer,rootLayer,generationInfo,classInfo
 				)
 			}
 		
-			var x = [frame x]
-			var y = [frame y]
-			var width = [frame width]
-			var height = [frame height]
-
-			log("parent Group: " + parentGroup)
-			log("rootLayer: " + rootLayer)
-
-			if (parentGroup==rootLayer) {
-				x = 0
-				y = 0
-			}
+			
 		
 			performInit.body.push(
 				"",
@@ -352,7 +370,6 @@ function processBezierLayer(layer,parentLayer,rootLayer,generationInfo,classInfo
 				"\tself."+layerName+".frame = CGRectMake("+x+","+y+","+width+","+height+");",
 				""
 			)
-			
 			
 			var layoutMethodName = "layoutLayer" + com.buscarini.utils.firstLetterUppercase(layerName)
 			var layoutLayerView = new Method("void",layoutMethodName)
@@ -476,8 +493,9 @@ function processAnimationKey(keyPath,animationInfo,classInfo) {
 	for (var key in animationDic) {
 	    if (animationDic.hasOwnProperty(key)) {
 			var animationValues = animationDic[key]
-				
-			if (com.buscarini.utils.allValuesEqual(animationValues)) return
+			
+			// TODO: Remove this! Only for debugging!	
+			// if (com.buscarini.utils.allValuesEqual(animationValues)) return
 
 			var animationValuesString = animationValues.join(",")
 			
@@ -516,10 +534,6 @@ function processLayerAnimation(layer,parentLayer,rootLayer,generationInfo,classI
 			classInfo.methods[generationInfo.currentAnimationInfo.animationName] = animationMethod
 			generationInfo.animations.push(generationInfo.currentAnimationInfo.animationName)
 				
-			//// ONLY FOR DEBUGGING!!
-			var performInit = classInfo.methods["performInit"]
-			performInit.body.push("\t[self "+animationMethod.name+":self];")
-
 			generationInfo.currentAnimationInfo.keyPaths = {}
 
 			// Process sublayers
@@ -532,6 +546,7 @@ function processLayerAnimation(layer,parentLayer,rootLayer,generationInfo,classI
 			}
 			
 			// Generate animations
+			processAnimationKey("position",generationInfo.currentAnimationInfo,classInfo)
 			processAnimationKey("opacity",generationInfo.currentAnimationInfo,classInfo)
 			processAnimationKey("path",generationInfo.currentAnimationInfo,classInfo)
 			processAnimationKey("shadowPath",generationInfo.currentAnimationInfo,classInfo)
@@ -541,6 +556,10 @@ function processLayerAnimation(layer,parentLayer,rootLayer,generationInfo,classI
 			processAnimationKey("shadowColor",generationInfo.currentAnimationInfo,classInfo)
 			processAnimationKey("shadowOffset",generationInfo.currentAnimationInfo,classInfo)
 			processAnimationKey("shadowRadius",generationInfo.currentAnimationInfo,classInfo)
+			
+			//// TODO: Removet this! ONLY FOR DEBUGGING!!
+			var performInit = classInfo.methods["performInit"]
+			performInit.body.push("\t[self "+animationMethod.name+":self];")
 			
 			generationInfo.currentAnimationInfo = null
 		}
@@ -566,7 +585,6 @@ function processLayerAnimation(layer,parentLayer,rootLayer,generationInfo,classI
 function processLayer(layer,parentLayer,rootLayer,generationInfo,classInfo) {
 	log("processing layer " + layer)
 
-	// if (!layer || !layer.isVisible()) return
 	if (!layer || !com.buscarini.utils.isVisible(layer)) return null
 			
 	if (com.buscarini.utils.isGroup(layer)) {
@@ -625,7 +643,6 @@ function main() {
 			viewName = finalViewName(selectedLayer.name())
 		}
 		else {
-			// viewName = com.buscarini.utils.normalizeName([doc askForUserInput:"View class name?" initialValue:"MyView"])
 			viewName = finalViewName([doc askForUserInput:"View class name?" initialValue:"MyView"])
 		}
 	
