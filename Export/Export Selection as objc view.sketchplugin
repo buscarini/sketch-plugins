@@ -8,8 +8,6 @@ function addAnimationValue(animationInfo,layerName,key,value) {
 	if (!animationInfo) return
 	if (!animationInfo.keyPaths[key]) animationInfo.keyPaths[key] = {}
 
-	log(key)
-
 	if (animationInfo.keyPaths[key][layerName]==undefined) animationInfo.keyPaths[key][layerName] = []
 	animationInfo.keyPaths[key][layerName].push(value)
 }
@@ -71,7 +69,7 @@ function processLayerStyle(layerName,layer,generationInfo,classInfo) {
 			var gradientColors = []
 			for (var i = 0; i < [gradientStops count]; i++) {
 				var gradientStop = [gradientStops objectAtIndex:i]
-				log("gradientStop" + i)
+
 				gradientPositions.push("@("+[gradientStop position]+")")
 				var color = [gradientStop color]
 				gradientColors.push("(id)[UIColor colorWithRed:"+[color red]+" green:"+[color green]+" blue:"+[color blue]+" alpha:"+[color alpha]+"].CGColor")
@@ -180,11 +178,7 @@ function processBezierLayerPath(layer,parentLayer,rootLayer,generationInfo,class
 		var absoluteRect = [parentGroup frame]
 		var layerName = finalLayerName(parentGroup)
 
-		log("parentGroup: " + parentGroup)
-
 		var grandpaGroup = [parentGroup parentGroup]
-			
-		log("grandpaGroup: " + grandpaGroup)
 			
 		var grandpaLayerName = finalLayerName(grandpaGroup)
 
@@ -273,9 +267,7 @@ function processBezierLayer(layer,parentLayer,rootLayer,generationInfo,classInfo
 		var positionX = positionX+width/2
 		var positionY = positionY+height/2
 		
-		if (generationInfo.currentAnimationInfo) {
-			log("x: " +x + " y: " + y)
-			
+		if (generationInfo.currentAnimationInfo) {			
 			addAnimationValue(generationInfo.currentAnimationInfo,layerName,"position","[NSValue valueWithCGPoint:CGPointMake("+positionX+","+positionY+")]")
 			processBezierLayerPath(layer,parentLayer,rootLayer,generationInfo,classInfo)
 			processLayerStyle(layerName,parentGroup,generationInfo,classInfo)
@@ -382,8 +374,6 @@ function processContainerLayer(layer,parentLayer,rootLayer,generationInfo,classI
 	
 	var layerProperty = new Property("CALayer *",layerName)
 		
-	log("layer" + layer + "parentLayer" + parentLayer + "rootLayer" + rootLayer + "generationInfo" + generationInfo + "classInfo" + classInfo)
-		
 	classInfo.properties[layerName] = layerProperty
 	
 	var x = [frame x]
@@ -395,8 +385,6 @@ function processContainerLayer(layer,parentLayer,rootLayer,generationInfo,classI
 	}
 	
 	var performInit = classInfo.methods["performInit"]
-	
-	log(classInfo.methods)
 	
 	performInit.body.push(
 		"\t// " + layerName,
@@ -425,9 +413,7 @@ function processAnimationKey(keyPath,animationInfo,classInfo) {
 			var layerName = key
 
 			var repeatCount = animationInfo.repeatCount
-				log(repeatCount)
 			if (repeatCount=="always" || repeatCount=="infinite") repeatCount = "HUGE_VALF"
-				log(repeatCount)
 
 			var animationName = layerName+com.buscarini.utils.firstLetterUppercase(keyPath)+"Animation"
 
@@ -569,7 +555,6 @@ function main() {
 		[panel setCanChooseFiles:false];
 	
 		var result = [panel runModal]
-		log("path choose result: " + result)
 		
 		if (result != NSFileHandlingPanelOKButton) return
 		
@@ -588,8 +573,6 @@ function main() {
 
 		var headerFile = [path URLByAppendingPathComponent:viewName + ".h"]
 		var implementationFile = [path URLByAppendingPathComponent:viewName + ".m"]
-		
-		log("Final header and imp files: " + headerFile + " " + implementationFile)
 
 		var classInfo = new ClassInfo(viewName)
 		classInfo.parentClass = "UIView"
@@ -644,8 +627,6 @@ function main() {
 
 		var header = com.buscarini.objc.generateHeader(classInfo)
 		var implementation = com.buscarini.objc.generateImplementation(classInfo)
-	
-		log("Writing files")
 
 		var fileManager = [NSFileManager defaultManager];
 	
