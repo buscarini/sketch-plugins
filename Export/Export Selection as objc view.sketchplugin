@@ -2,6 +2,71 @@
 
 #import '../buscarini/library.js'
 
+// Model
+/*
+var ViewInfo = augment(ClassInfo,function(uber) {
+	constructor: function() {
+		uber.constructor.call(this)
+		this.layers = []
+	},
+	layers: null
+})
+
+var LayerInfo = augment.defclass({
+	constructor: function() {
+		this.syle = LayerStyle()
+	},
+	syle: null
+})
+
+var BezierLayerInfo = augment(LayerInfo, function(uber) {
+	constructor: function() {
+		uber.constructor.call(this)
+		this.points = []
+	},
+	points: null
+})
+
+var BezierLayerPoint = augment.defclass({
+	x: 0,
+	y: 0,
+	curveFromX: 0,
+	curveFromY: 0,
+	curveToX: 0,
+	curveToY: 0
+})
+
+var LayerStyle = augment.defclass({
+	constructor: function() {
+		this.fill = LayerStylePart()
+		this.border = BorderLayerStylePart()
+		this.shadow = ShadowLayerStylePart()
+	},
+	fill: null,
+	border: null,
+	shadow: null,
+	opacity: 1
+})
+
+var LayerStylePart: augment.defclass({
+	color: null
+})
+
+var BorderLayerStylePart: augment(LayerStylePart,function(uber){
+	constructor: function() {
+		uber.constructor.call(this)
+	},
+	lineWidth: 0
+})
+
+var ShadowLayerStylePart: augment(LayerStylePart,function(uber) {
+	constructor: function() {
+		uber.constructor.call(this)
+	},
+	offset: null,
+	radius: 0
+})*/
+
 // Utility functions
 
 function addAnimationValue(animationInfo,layerName,key,value) {
@@ -134,17 +199,20 @@ function processLayerStyle(layerName,layer,generationInfo,classInfo) {
 
 function processPoint(layerName,index,previousPoint,point,absoluteRect,rootLayer,generationInfo,method) {
 	
-	var originX = 0
-	var originY = 0
+	var originX = absoluteRect.x
+	var originY = absoluteRect.y
 	
 	var proportion = 1
 	
-	var x = (point.point().x*[absoluteRect width]+originX)*proportion
-	var y = (point.point().y*[absoluteRect height]+originY)*proportion
-	var controlPoint1x = (previousPoint.curveFrom().x*[absoluteRect width]+originX)*proportion
-	var controlPoint1y = (previousPoint.curveFrom().y*[absoluteRect height]+originY)*proportion
-	var controlPoint2x = (point.curveTo().x*[absoluteRect width]+originX)*proportion
-	var controlPoint2y = (point.curveTo().y*[absoluteRect height]+originY)*proportion
+	log("absoluteRect " + absoluteRect)	
+	// com.buscarini.utils.dump(point)
+	
+	var x = (point.point().x*absoluteRect.width+originX)*proportion
+	var y = (point.point().y*absoluteRect.height+originY)*proportion
+	var controlPoint1x = (previousPoint.curveFrom().x*absoluteRect.width+originX)*proportion
+	var controlPoint1y = (previousPoint.curveFrom().y*absoluteRect.height+originY)*proportion
+	var controlPoint2x = (point.curveTo().x*absoluteRect.width+originX)*proportion
+	var controlPoint2y = (point.curveTo().y*absoluteRect.height+originY)*proportion
 	
 	if (index==0) {
 		method.body.push("\t["+layerName+"Path moveToPoint:CGPointMake("+x+","+y+")];")
@@ -158,8 +226,8 @@ function processPoint(layerName,index,previousPoint,point,absoluteRect,rootLayer
 		}
 		
 		if ([previousPoint curveMode]==1) {
-			controlPoint1x = (previousPoint.point().x*[absoluteRect width]+originX)*proportion
-			controlPoint1y = (previousPoint.point().y*[absoluteRect height]+originY)*proportion
+			controlPoint1x = (previousPoint.point().x*absoluteRect.width+originX)*proportion
+			controlPoint1y = (previousPoint.point().y*absoluteRect.height+originY)*proportion
 		}
 		
 		method.body.push("\t["+layerName+"Path addCurveToPoint:CGPointMake("+x+","+y+") controlPoint1:CGPointMake("+controlPoint1x+","+controlPoint1y+") controlPoint2:CGPointMake("+controlPoint2x+","+controlPoint2y+")];")
@@ -175,11 +243,19 @@ function processBezierLayerPath(layer,parentLayer,rootLayer,generationInfo,class
 	if(layer && layer.isKindOfClass(MSShapePathLayer)) {
 
 		var parentGroup = [layer parentGroup]
-		var absoluteRect = [parentGroup frame]
+		var frame = [layer frame]
+		var parentFrame = [parentGroup frame]
+		var absoluteRect = { x: [frame x], y: [frame y], width: [frame width],height: [frame height] }
+		absoluteRect.x += [parentFrame x]
+		absoluteRect.y += [parentFrame y]
+		
 		var layerName = finalLayerName(parentGroup)
 
 		var grandpaGroup = [parentGroup parentGroup]
-			
+		var grandpaFrame = [grandpaGroup frame]
+		absoluteRect.x += [grandpaFrame x]
+		absoluteRect.y += [grandpaFrame y]		
+		
 		var grandpaLayerName = finalLayerName(grandpaGroup)
 
 		var path = layer.path()
@@ -196,6 +272,7 @@ function processBezierLayerPath(layer,parentLayer,rootLayer,generationInfo,class
 		pathMethod.body.push("\tUIBezierPath *"+layerName+"Path = [UIBezierPath bezierPath];","")
 
 		log("processing points")
+		com.buscarini.utils.dump(path)
 
 		var points = path.points()
 		for (var j = 0; j < [points count]; j++) {
@@ -242,10 +319,11 @@ function processBezierLayer(layer,parentLayer,rootLayer,generationInfo,classInfo
 		var layerName = finalLayerName(parentGroup)
 		
 		var frame = [parentGroup frame]
-		if (parentGroup!=rootLayer) {
-		}
 			
 		var currentFrame = [layer frame]
+
+		log("frame " + frame)
+		log("current frame " + currentFrame)
 			
 		var x = [frame x]
 		var y = [frame y]
@@ -260,6 +338,7 @@ function processBezierLayer(layer,parentLayer,rootLayer,generationInfo,classInfo
 		var positionX = x
 		var positionY = y
 		if (parentGroup!=rootLayer) {
+			log("grandpa frame " + [grandpaGroup frame])
 			positionX = [[grandpaGroup frame] x]
 			positionY = [[grandpaGroup frame] y]
 		}
