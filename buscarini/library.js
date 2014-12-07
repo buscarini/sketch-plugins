@@ -328,3 +328,31 @@ com.buscarini.utils = {
 		return layer.isVisible()
 	}
 }
+
+var Point2 = augment.defclass({
+	constructor: function(x,y) {
+		this.x = x
+		this.y = y
+	},
+	x : 0,
+	y: 0	
+})
+
+var Vec2 = augment.defclass({
+	constructor: function(x,y) {
+		this.x = x
+		this.y = y
+	},
+	x : 0,
+	y: 0,
+	normalize: function() {
+		var mag = this.magnitude()
+		this.x /= mag
+		this.y /= mag
+	},
+	magnitude: function() {
+		return sqrt(this.x*this.x+this.y*this.y)
+	}
+})
+
+var bezierCircleConstant = 0.551915024494

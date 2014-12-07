@@ -197,18 +197,23 @@ function processLayerStyle(layerName,layer,generationInfo,classInfo) {
 	)
 }
 
-function processPoint(layerName,index,previousPoint,point,absoluteRect,rootLayer,generationInfo,method) {
+function processPoint(layerName,index,previousPoint,previousFinalControlPoint,point,absoluteRect,rootLayer,generationInfo,method) {
 	
 	var originX = absoluteRect.x
 	var originY = absoluteRect.y
+		
+	var finalControlPoint = new Point2(0,0)
 	
 	var proportion = 1
 	
 	log("absoluteRect " + absoluteRect)	
-	// com.buscarini.utils.dump(point)
+	//com.buscarini.utils.dump(point)
 	
 	var x = (point.point().x*absoluteRect.width+originX)*proportion
 	var y = (point.point().y*absoluteRect.height+originY)*proportion
+	var previousX = (previousPoint.point().x*absoluteRect.width+originX)*proportion
+	var previousY = (previousPoint.point().y*absoluteRect.height+originY)*proportion
+		
 	var controlPoint1x = (previousPoint.curveFrom().x*absoluteRect.width+originX)*proportion
 	var controlPoint1y = (previousPoint.curveFrom().y*absoluteRect.height+originY)*proportion
 	var controlPoint2x = (point.curveTo().x*absoluteRect.width+originX)*proportion
@@ -221,13 +226,50 @@ function processPoint(layerName,index,previousPoint,point,absoluteRect,rootLayer
 		// 1 straight, 2 mirrored, 3 asymmetric, 4 disconnected
 		
 		if ([point curveMode]==1) {
-			controlPoint2x = x
-			controlPoint2y = y
+			var cornerRadius = [point cornerRadius]
+			if (cornerRadius>0) {
+				var vector = new Vec2(x-previousX,y-previousY)
+				vector.normalize()
+				x += cornerRadius*vector.x
+				y += cornerRadius*vector.y
+
+				controlPoint2x = x
+				controlPoint2y = y
+					
+				var controlPointLength = bezierCircleConstant*cornerRadius/2
+				finalControlPoint.x = x-controlPointLength*vector.x
+				finalControlPoint.y = y-controlPointLength*vector.y
+			}
+			else {
+				controlPoint2x = x
+				controlPoint2y = y				
+			}
 		}
 		
 		if ([previousPoint curveMode]==1) {
-			controlPoint1x = (previousPoint.point().x*absoluteRect.width+originX)*proportion
-			controlPoint1y = (previousPoint.point().y*absoluteRect.height+originY)*proportion
+			var cornerRadius = [previousPoint cornerRadius]
+			if (cornerRadius>0) {
+				var vector = new Vec2(x-previousX,y-previousY)
+				vector.normalize()
+				previousX -= cornerRadius*vector.x
+				previousY -= cornerRadius*vector.y
+				
+				var controlPointLength = bezierCircleConstant*cornerRadius/2
+				var newControlPoint2x = previousX+controlPointLength*vector
+				var newControlPoint2y = previousY+controlPointLength*vector
+
+				var newControlPoint1x = previousFinalControlPoint.x
+				var newControlPoint1y = previousFinalControlPoint.y
+					
+				method.body.push("\t["+layerName+"Path addCurveToPoint:CGPointMake("+previousX+","+previousY+") controlPoint1:CGPointMake("+newControlPoint1x+","+newControlPoint1y+") controlPoint2:CGPointMake("+newControlPoint2x+","+newControlPoint2y+")];")
+
+				controlPoint1x = previousX
+				controlPoint1y = previousY					
+			}
+			else {
+				controlPoint1x = previousX
+				controlPoint1y = previousY
+			}
 		}
 		
 		method.body.push("\t["+layerName+"Path addCurveToPoint:CGPointMake("+x+","+y+") controlPoint1:CGPointMake("+controlPoint1x+","+controlPoint1y+") controlPoint2:CGPointMake("+controlPoint2x+","+controlPoint2y+")];")
@@ -235,6 +277,8 @@ function processPoint(layerName,index,previousPoint,point,absoluteRect,rootLayer
 	else {	
 		method.body.push("\t["+layerName+"Path addLineToPoint:CGPointMake("+x+","+y+")];")
 	}
+	
+	return finalControlPoint
 }
 
 function processBezierLayerPath(layer,parentLayer,rootLayer,generationInfo,classInfo) {
@@ -274,6 +318,8 @@ function processBezierLayerPath(layer,parentLayer,rootLayer,generationInfo,class
 		log("processing points")
 		com.buscarini.utils.dump(path)
 
+		var finalControlPoint = null
+			
 		var points = path.points()
 		for (var j = 0; j < [points count]; j++) {
 			
@@ -289,13 +335,13 @@ function processBezierLayerPath(layer,parentLayer,rootLayer,generationInfo,class
 			    previousPoint = [points objectAtIndex:j-1]
 			}
 			
-			processPoint(layerName,j,previousPoint,point,absoluteRect,rootLayer,generationInfo,pathMethod)
+			finalControlPoint = processPoint(layerName,j,previousPoint,finalControlPoint,point,absoluteRect,rootLayer,generationInfo,pathMethod)
 			
 			if (j==[points count]-1) {
 				point = [points objectAtIndex:0]
 				
 			    previousPoint = [points objectAtIndex:j]
-				processPoint(layerName,j,previousPoint,point,absoluteRect,rootLayer,generationInfo,pathMethod)
+				finalControlPoint = processPoint(layerName,j,previousPoint,finalControlPoint,point,absoluteRect,rootLayer,generationInfo,pathMethod)
 			}
 		}
 		
