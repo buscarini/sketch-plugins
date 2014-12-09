@@ -106,6 +106,8 @@ function processLayerStyle(layerName,layer,generationInfo,classInfo) {
 
 	var firstFill = com.buscarini.utils.firstStylePart([layerStyle fills])
 		
+	com.buscarini.utils.dump(firstFill)
+		
 	if (firstFill) {
 		if (!com.buscarini.utils.isGradientFill(firstFill)) {
 			var fillColor = [firstFill color]
@@ -305,7 +307,7 @@ function processBezierLayerPath(layer,parentLayer,rootLayer,generationInfo,class
 		var path = layer.path()
 				
 		var methodName = "new"+com.buscarini.utils.firstLetterUppercase(layerName)
-		if (!com.buscarini.utils.isAnimation(grandpaGroup)) methodName += com.buscarini.utils.firstLetterUppercase(grandpaLayerName)
+		methodName += com.buscarini.utils.uniqueScriptId() //com.buscarini.utils.firstLetterUppercase(grandpaLayerName)
 		methodName += "Path"
 
 		addAnimationValue(generationInfo.currentAnimationInfo,layerName,"path","(id)[self "+methodName +"].CGPath")
@@ -359,6 +361,8 @@ function processBezierLayer(layer,parentLayer,rootLayer,generationInfo,classInfo
 	log("processing bezier layer " + layer)
 	
 	if(layer && layer.isKindOfClass(MSShapePathLayer)) {
+		
+		// com.buscarini.utils.dump(layer)
 				
 		var parentGroup = [layer parentGroup]
 		var grandpaGroup = [parentGroup parentGroup]
